@@ -1,109 +1,52 @@
-# Documentación del Proyecto - TPO AyED II
+# Índice General de Documentación Técnica
 
-Bienvenido a la documentación oficial del Trabajo Práctico Obligatorio.
-
----
-
-## 📖 Orden de Lectura Recomendado
-
-Los documentos están numerados en orden de lectura sugerido:
-
-### 🚀 Inicio (Leer primero)
-**[01_README](01_README.md)** - Guía de inicio y conceptos clave
-- Cómo compilar y ejecutar
-- Características principales
-- Arquitectura en capas
-- Conceptos clave (Singleton, Lazy Loading, Undo/Redo)
-- Ejemplo de uso completo
+Este repositorio contiene la documentación integral del Trabajo Práctico Obligatorio (TPO) para la asignatura Algoritmos y Estructuras de Datos II.
 
 ---
 
-### 📚 Estructuras de Datos
-**[02_TDAs](02_TDAs.md)** - Guía completa de Tipos de Datos Abstractos
-- Diccionario (Hash Table)
-- Pila (LIFO)
-- Cola (FIFO)
-- Conjunto (Set)
-- Justificación teórica de cada estructura
-- Ejemplos de uso
+## 1. Documentación Ejecutiva y Arquitectónica
+
+*   **[01_README.md](01_README.md)**: Manual de referencia principal. Incluye guía de configuración, ejecución y resumen de arquitectura.
+*   **[03_Arquitectura.md](03_Arquitectura.md)**: Especificación técnica del diseño del sistema, patrones aplicados (Singleton, Facade), y justificación de decisiones arquitectónicas.
+*   **[04_Planificacion_General.md](04_Planificacion_General.md)**: Hoja de ruta del proyecto, desglose de iteraciones y especificación detallada de casos de uso.
+*   **[06_Analisis_Diseno_Software.md](06_Analisis_Diseno_Software.md)**: Auditoría de principios SOLID y GRASP, con identificación de deuda técnica y oportunidades de refactorización.
 
 ---
 
-### 📐 Arquitectura y Diseño
-**[03_Arquitectura](03_Arquitectura.md)** - Patrones, SOLID y GRASP
-- Patrones de diseño (Singleton, Facade, Value Object, Static Utility)
-- Principios SOLID y GRASP aplicados
-- Decisiones de diseño justificadas
-- Invariantes de representación
+## 2. Documentación Algorítmica y de Estructuras de Datos
+
+*   **[02_TDAs.md](02_TDAs.md)**: Catálogo técnico de Tipos de Datos Abstractos (Diccionario, Pila, Cola, Conjunto), con justificación teórica y detalles de implementación.
+*   **[05_Analisis_Algoritmico.md](05_Analisis_Algoritmico.md)**: Estudio de complejidad temporal (Big O) para operaciones críticas del sistema.
+*   **[07_Invariantes.md](07_Invariantes.md)**: Definición formal de las condiciones de integridad y consistencia (invariantes de representación) para cada entidad y TDA.
 
 ---
 
-### 📋 Planificación
-**[04_Planificacion_General](04_Planificacion_General.md)** - Visión completa
-- Casos de uso (Iteraciones 1, 2 y 3)
-- Modelo de datos
-- Estructura del proyecto
+## 3. Calidad y Mantenimiento
+
+*   **[08_Code_Review.md](08_Code_Review.md)**: Reporte de auditoría de código estático, métricas de calidad y registro de correcciones implementadas.
 
 ---
 
-### 🔍 Análisis Técnico
-**[05_Analisis_Algoritmico](05_Analisis_Algoritmico.md)** - Big O de cada método
-- Complejidad de TDAs
-- Complejidad de Modelo
-- Complejidad de Servicios
-- Optimizaciones implementadas
+## 4. Recursos Adicionales
 
-**[06_Analisis_Diseno_Software](06_Analisis_Diseno_Software.md)** - Evaluación SOLID/GRASP
-- Evaluación de calidad de software
-- Mejoras implementadas
+*   **[diagramas/](diagramas/)**: Representaciones visuales del sistema (UML) generadas con PlantUML.
+    *   Arquitectura General
+    *   Modelo de Clases y Relaciones
+    *   Diagrama de Interfaces
 
 ---
 
-### 📝 Referencia
-**[07_Invariantes](07_Invariantes.md)** - Reglas de representación
-- Invariantes de TDAs
-- Invariantes de Modelo
-- Invariantes de Servicios
+## Guía de Lectura Sugerida
 
-**[08_Code_Review](08_Code_Review.md)** - Análisis de calidad
-- Problemas detectados y corregidos
-- Buenas prácticas identificadas
-- Recomendaciones
+### Perfil Académico / Evaluador
+1.  **Visión Sistémica**: `01_README.md` -> `03_Arquitectura.md`.
+2.  **Profundidad Técnica**: `02_TDAs.md` -> `05_Analisis_Algoritmico.md`.
+3.  **Calidad de Software**: `06_Analisis_Diseno_Software.md` -> `08_Code_Review.md`.
 
----
-
-## 🗂️ Diagramas
-
-Consulte la carpeta **[diagramas/](diagramas/)** para visualizaciones UML:
-- [Diagrama de Arquitectura](diagramas/diagrama_arquitectura.puml)
-- [Diagrama de TDAs](diagramas/diagrama_tda_modelado.puml)
-- [Diagrama de Interfaces](diagramas/diagrama_interfaces.puml)
+### Perfil Desarrollador / Mantenedor
+1.  **Entorno y Configuración**: `01_README.md`.
+2.  **Integridad de Datos**: `07_Invariantes.md`.
+3.  **Hoja de Ruta**: `04_Planificacion_General.md`.
 
 ---
-
-## 🎯 Guía Rápida por Perfil
-
-### Para entender el proyecto (30 min):
-1. **01_README** - Visión general
-2. **02_TDAs** - Estructuras de datos
-3. **03_Arquitectura** - Patrones y diseño
-
-### Para desarrollo:
-1. **01_README** - Inicio rápido
-2. **07_Invariantes** - Reglas de representación
-3. **05_Analisis_Algoritmico** - Complejidad Big O
-
-### Para evaluación académica:
-1. **01_README** - Resumen ejecutivo
-2. **03_Arquitectura** - Patrones SOLID/GRASP
-3. **02_TDAs** - Justificación teórica
-4. **08_Code_Review** - Calidad de código
-
----
-
-**Última actualización**: 2026-02-05  
-**Estado**: Documentación consolidada y consistente con código ✅
-
----
-
-*Documentación académica - UADE - Algoritmos y Estructuras de Datos II*
+*Universidad Argentina de la Empresa (UADE) - 2026*

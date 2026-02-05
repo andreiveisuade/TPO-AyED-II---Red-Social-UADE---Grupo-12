@@ -1,354 +1,113 @@
-# Guía Completa de TDAs (Tipos de Datos Abstractos)
+# Especificación de Tipos de Datos Abstractos (TDAs)
 
-Documentación técnica y justificación teórica de las estructuras de datos implementadas.
-
----
-
-## 📚 Resumen de TDAs
-
-| TDA | Política | Complejidad | Uso Principal |
-|-----|----------|-------------|---------------|
-| **Diccionario<K,V>** | Hash Table | O(1) amortizado | Clientes por ID |
-| **Pila<T>** | LIFO | O(1) | Historial + Redo |
-| **Cola<T>** | FIFO | O(1) | Solicitudes pendientes |
-| **Conjunto** | Set único | O(1) | Verificación de duplicados |
+Este documento justifica técnica y teóricamente la elección de las estructuras de datos, detallando su implementación, complejidad asintótica y aplicación en el dominio del problema.
 
 ---
 
-## 1. Diccionario<K,V> (Hash Table)
+## 1. Resumen de Complejidad
 
-### 📁 Archivo
-`tda/Diccionario.java` + `tda/IDiccionario.java`
+Se ha priorizado un límite superior asintótico de **O(1)** para las operaciones más frecuentes del sistema.
 
-### 🔧 Operaciones
+| Estructura | Implementación | Acceso | Inserción | Eliminación | Uso Principal |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Diccionario** | Hash Table (Addressable) | O(1)* | O(1)* | O(1)* | Indexación de usuarios y relaciones. |
+| **Pila** | Linked List (LIFO) | O(1) | O(1) | O(1) | Gestión del historial (Undo/Redo). |
+| **Cola** | Linked List (FIFO) | O(1) | O(1) | O(1) | Buffer de solicitudes de seguimiento. |
+| **Conjunto** | Hash Set Adapter | O(1)* | O(1)* | O(1)* | Verificación de unicidad. |
 
-| Método | Descripción | Complejidad |
-|--------|-------------|-------------|
-| `insertar(K clave, V valor)` | Inserta par clave-valor | O(1) amortizado |
-| `obtener(K clave)` | Obtiene valor por clave | O(1) amortizado |
-| `contiene(K clave)` | Verifica existencia de clave | O(1) amortizado |
-| `eliminar(K clave)` | Elimina par por clave | O(1) amortizado |
-| `getCantidad()` | Cantidad de pares | O(1) |
-| `obtenerClaves()` | Retorna todas las claves | O(n + m) |
-| `obtenerValores()` | Retorna todos los valores | O(n + m) |
-
-### 🏗️ Estructura Interna
-
-**Implementación**: Array de 64 buckets con encadenamiento
-
-```
-Diccionario
-  └── tabla: NodoDiccionario[64]  (array de buckets)
-        ├── [0] → null
-        ├── [1] → Nodo(clave, valor) → Nodo → null  (colisiones encadenadas)
-        ├── [2] → Nodo(clave, valor) → null
-        └── ...
-
-Función Hash: Math.abs(clave.hashCode() % 64)
-```
-
-### 📍 Dónde se usa
-
-| Clase | Atributo | Tipo | Propósito |
-|-------|----------|------|-----------|
-| `GestorClientes` | `clientes` | `Diccionario<Integer, Cliente>` | Almacena todos los clientes por ID |
-| `Cliente` | `siguiendo` | `Diccionario<Integer, Boolean>` | Usuarios que sigue (sin límite) |
-| `Conjunto` | `elementos` | `Diccionario<String, Boolean>` | Implementación interna del Set |
-
-### 💡 Justificación Teórica
-
-**¿Por qué Hash Table?**
-- Búsqueda de clientes por ID en O(1) en lugar de O(n)
-- Con 1 millón de usuarios, la diferencia es crítica:
-  - Lista: 1,000,000 comparaciones (peor caso)
-  - Hash Table: ~1 comparación (promedio)
-
-**¿Por qué capacidad fija 64?**
-- Suficiente para carga típica (< 100 clientes en memoria simultánea)
-- Evita complejidad de rehashing
-- Factor de carga aceptable: 50/64 = 0.78 (< 0.75 ideal)
-
-**Manejo de colisiones**:
-- Encadenamiento (listas enlazadas en cada bucket)
-- Inserción al inicio del bucket: O(1)
-- Búsqueda en bucket: O(k) donde k = elementos en bucket (≈ 1 en promedio)
-
-### 📊 Ejemplo de Uso
-
-```java
-// En GestorClientes
-Diccionario<Integer, Cliente> clientes = new Diccionario<>();
-clientes.insertar(100000, new Cliente(100000, "Federico", 85));
-Cliente c = clientes.obtener(100000);  // O(1)
-
-// En Cliente (seguimiento sin límite)
-Diccionario<Integer, Boolean> siguiendo = new Diccionario<>();
-siguiendo.insertar(5000, true);  // Sigue al usuario 5000
-boolean sigue = siguiendo.contiene(5000);  // O(1)
-```
+*\* Amortizado promedio.*
 
 ---
 
-## 2. Pila<T> (LIFO - Last In, First Out)
+## 2. Diccionario (Hash Table)
 
-### 📁 Archivo
-`tda/Pila.java` + `tda/IPila.java`
+### 2.1. Definición
+Estructura asociativa que almacena pares clave-valor, permitiendo la recuperación eficiente de valores a partir de su clave única.
 
-### 🔧 Operaciones
+### 2.2. Implementación Técnica
+*   **Estrategia**: Open Hashing (Encadenamiento separado).
+*   **Función Hash**: Modular aritmética (`Math.abs(key.hashCode() % CAPACIDAD)`).
+*   **Capacidad**: 64 buckets (Fija, sin rehashing dinámico por diseño para simplificar la gestión de memoria en este prototipo).
+*   **Colisiones**: Resueltas mediante listas enlazadas simples en cada bucket.
 
-| Método | Descripción | Complejidad |
-|--------|-------------|-------------|
-| `apilar(T dato)` | Agrega elemento al tope | O(1) |
-| `desapilar()` | Remueve y retorna el tope | O(1) |
-| `verTope()` | Consulta el tope sin remover | O(1) |
-| `estaVacia()` | Verifica si está vacía | O(1) |
-| `getCantidad()` | Cantidad de elementos | O(1) |
-| `toArray()` | Convierte a array | O(n) |
+### 2.3. Análisis de Complejidad
+*   **Caso Promedio**: O(1), asumiendo una distribución uniforme de claves.
+*   **Peor Caso**: O(n), degenerando en una lista enlazada si todas las claves colisionan.
 
-### 🏗️ Estructura Interna
-
-```
-Pila
-  └── tope: NodoPila<T>
-        └── dato: T
-        └── siguiente: NodoPila<T> → ...
-```
-
-### 📍 Dónde se usa
-
-| Clase | Atributo | Propósito |
-|-------|----------|-----------|
-| `Sesion` | `pilaRehacer: Pila<Accion>` | Almacena acciones deshechas para redo |
-| `HistorialAcciones` | `historial: Pila<Accion>` | Almacena acciones realizadas para undo |
-
-### 💡 Justificación Teórica
-
-**¿Por qué Pila?**
-- La última acción realizada es la primera que se debe deshacer (LIFO)
-- Semántica natural para undo/redo
-- Al deshacer, la acción pasa de `historial` a `pilaRehacer`
-- Al rehacer, la acción vuelve de `pilaRehacer` a `historial`
-
-**Alternativas descartadas**:
-- **Cola**: Política FIFO, semánticamente incorrecta para undo
-- **Lista con acceso aleatorio**: Complejidad innecesaria
-
-### 📊 Flujo Undo/Redo
-
-```
-Acción ejecutada → historial.apilar(accion)
-                    ↓
-Usuario hace UNDO → accion = historial.desapilar()
-                    ejecutarUndo(accion)
-                    pilaRehacer.apilar(accion)
-                    ↓
-Usuario hace REDO → accion = pilaRehacer.desapilar()
-                    ejecutarRedo(accion)
-                    historial.apilar(accion)
-```
-
-### 📊 Ejemplo de Uso
-
-```java
-// HistorialAcciones
-Pila<Accion> historial = new Pila<>();
-historial.apilar(new Accion(TipoAccion.SEGUIR, "1001", "5000"));
-
-// Undo
-Accion ultima = historial.desapilar();  // O(1)
-ejecutarUndo(ultima);
-pilaRehacer.apilar(ultima);
-```
+### 2.4. Aplicación en el Sistema
+*   **Gestión de Usuarios**: `GestorClientes` utiliza un Diccionario para mapear `ID (Integer)` -> `Cliente (Objeto)`.
+*   **Relaciones**: Cada `Cliente` mantiene un Diccionario de usuarios seguidos para verificar relaciones en tiempo constante.
 
 ---
 
-## 3. Cola<T> (FIFO - First In, First Out)
+## 3. Pila (Stack)
 
-### 📁 Archivo
-`tda/Cola.java` + `tda/ICola.java`
+### 3.1. Definición
+Colección lineal que sigue la política **LIFO** (Last In, First Out).
 
-### 🔧 Operaciones
+### 3.2. Implementación Técnica
+*   **Estructura**: Lista enlazada simple.
+*   **Punteros**: Referencia única al nodo `tope`.
 
-| Método | Descripción | Complejidad |
-|--------|-------------|-------------|
-| `encolar(T dato)` | Agrega elemento al final | O(1) |
-| `desencolar()` | Remueve y retorna el frente | O(1) |
-| `verFrente()` | Consulta el frente sin remover | O(1) |
-| `estaVacia()` | Verifica si está vacía | O(1) |
-| `getCantidad()` | Cantidad de elementos | O(1) |
+### 3.3. Análisis de Complejidad
+Todas las operaciones primitivas (`push`, `pop`, `peek`) manipulan únicamente el puntero al tope, garantizando una complejidad temporal constante **O(1)** independiente del tamaño de la pila.
 
-### 🏗️ Estructura Interna
-
-```
-Cola
-  ├── frente: NodoCola<T> ──→ siguiente ──→ ... ──→ fin
-  └── fin: NodoCola<T>
-```
-
-### 📍 Dónde se usa
-
-| Clase | Atributo | Propósito |
-|-------|----------|-----------|
-| `Cliente` | `solicitudesPendientes: Cola<SolicitudSeguimiento>` | Cola de solicitudes de seguimiento recibidas |
-
-### 💡 Justificación Teórica
-
-**¿Por qué Cola?**
-- Las solicitudes deben procesarse en orden de llegada (FIFO)
-- La primera solicitud que llegó es la primera que se atiende
-- Garantiza equidad: nadie "se salta la fila"
-
-**Implementación**:
-- Lista enlazada con punteros `frente` y `fin`
-- `encolar()`: Inserción al final usando puntero `fin` → O(1)
-- `desencolar()`: Eliminación del frente → O(1)
-
-### 📊 Flujo de Solicitudes
-
-```
-Usuario A envía solicitud a B → B.solicitudesPendientes.encolar(solicitud)
-Usuario B procesa solicitud   → B.solicitudesPendientes.desencolar()
-```
-
-### 📊 Ejemplo de Uso
-
-```java
-// Cliente
-Cola<SolicitudSeguimiento> solicitudesPendientes = new Cola<>();
-solicitudesPendientes.encolar(new SolicitudSeguimiento("1001", "5000"));
-
-// Procesar
-SolicitudSeguimiento siguiente = solicitudesPendientes.desencolar();  // O(1)
-```
+### 3.4. Aplicación en el Sistema
+Se utiliza implementar el patrón **Command** para la funcionalidad de deshacer/rehacer:
+1.  **Historial**: Pila de acciones realizadas.
+2.  **Redo**: Pila de acciones revertidas.
 
 ---
 
-## 4. Conjunto (Set)
+## 4. Cola (Queue)
 
-### 📁 Archivo
-`tda/Conjunto.java` + `tda/IConjunto.java`
+### 4.1. Definición
+Colección lineal que sigue la política **FIFO** (First In, First Out).
 
-### 🔧 Operaciones
+### 4.2. Implementación Técnica
+*   **Estructura**: Lista enlazada simple.
+*   **Punteros**: Referencias explícitas a `frente` (inicio) y `fin` (final) para permitir inserciones y eliminaciones en extremos opuestos sin recorrer la estructura.
 
-| Método | Descripción | Complejidad |
-|--------|-------------|-------------|
-| `agregar(String elemento)` | Agrega elemento (si no existe) | O(1) |
-| `contiene(String elemento)` | Verifica si existe | O(1) |
-| `eliminar(String elemento)` | Elimina elemento | O(1) |
-| `getCantidad()` | Cantidad de elementos | O(1) |
-| `obtenerElementos()` | Retorna todos los elementos | O(n) |
+### 4.3. Análisis de Complejidad
+*   **Encolar**: Inserción al final usando el puntero `fin` → **O(1)**.
+*   **Desencolar**: Eliminación del frente usando el puntero `frente` → **O(1)**.
 
-### 🏗️ Estructura Interna
-
-```
-Conjunto
-  └── elementos: Diccionario<String, Boolean>
-        └── Usa el Diccionario internamente con valor siempre = true
-```
-
-### 📍 Dónde se usa
-
-Actualmente el `Conjunto` está **disponible pero no utilizado** en el código principal.
-
-**Uso potencial**: Verificación de duplicados en solicitudes (O(1) en lugar de O(n)).
-
-### 💡 Justificación Teórica
-
-**¿Por qué Conjunto?**
-- Garantiza unicidad de elementos
-- Verificación de pertenencia en O(1)
-- Patrón Decorator: envuelve un Diccionario para ofrecer API de Set
-
-**Implementación**:
-- Delega todas las operaciones al `Diccionario` interno
-- `agregar(x)` → `diccionario.insertar(x, true)`
-- `contiene(x)` → `diccionario.contiene(x)`
+### 4.4. Aplicación en el Sistema
+Gestiona las solicitudes de seguimiento asincrónicas. Garantiza la equidad en el procesamiento: la primera solicitud recibida es la primera en ser presentada al usuario.
 
 ---
 
-## 5. Nodos de Soporte
+## 5. Abstracción y Polimorfismo
 
-Los TDAs usan nodos enlazados para crecimiento dinámico:
+El sistema adhiere al **Principio de Inversión de Dependencias (DIP)** mediante la definición de interfaces estrictas para cada TDA:
 
-| Nodo | TDA que lo usa | Atributos |
-|------|----------------|-----------|
-| `NodoPila<T>` | `Pila<T>` | `dato`, `siguiente` |
-| `NodoCola<T>` | `Cola<T>` | `dato`, `siguiente` |
-| `NodoDiccionario<K,V>` | `Diccionario<K,V>` | `clave`, `valor`, `siguiente` |
+*   `IDiccionario<K,V>`
+*   `IPila<T>`
+*   `ICola<T>`
 
----
-
-## 6. Interfaces (SOLID: DIP)
-
-Cada TDA implementa una interfaz para cumplir con el Principio de Inversión de Dependencias:
-
-| TDA | Interfaz |
-|-----|----------|
-| `Pila<T>` | `IPila<T>` |
-| `Cola<T>` | `ICola<T>` |
-| `Diccionario<K,V>` | `IDiccionario<K,V>` |
-| `Conjunto` | `IConjunto` |
-
-**Beneficio**: Permite cambiar implementación sin afectar clientes.
+Esto desacopla la implementación concreta (listas enlazadas, arreglos, etc.) de los clientes que consumen estas estructuras (Gestores, Modelos), permitiendo la sustitución de implementaciones sin impacto en la lógica de negocio.
 
 ---
 
-## 📊 Diagrama de Relaciones
+## 6. Diagrama de Estructuras
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        MODELO                               │
-├─────────────────────────────────────────────────────────────┤
-│  Sesion                                                      │
-│    ├── historial: HistorialAcciones ─┐                      │
-│    │                                  │                      │
-│    │   HistorialAcciones              │                      │
-│    │     └── historial: Pila<Accion> ◄┘                     │
-│    │                                                         │
-│    └── pilaRehacer: Pila<Accion>                            │
-│                                                              │
-│  Cliente                                                     │
-│    ├── siguiendo: Diccionario<Integer, Boolean>             │
-│    └── solicitudesPendientes: Cola<SolicitudSeguimiento>    │
-├─────────────────────────────────────────────────────────────┤
-│                       SERVICIO                              │
-├─────────────────────────────────────────────────────────────┤
-│  GestorClientes                                             │
-│    └── clientes: Diccionario<Integer, Cliente>              │
-└─────────────────────────────────────────────────────────────┘
+A continuación se esquematiza la jerarquía y composición de los TDAs en el modelo de objetos:
+
+```mermaid
+classDiagram
+    class GestorClientes
+    class Cliente
+    class Diccionario
+    class Cola
+    class Pila
+    class Sesion
+
+    GestorClientes --> Diccionario : usa (Clientes)
+    Cliente --> Diccionario : usa (Seguidos)
+    Cliente --> Cola : usa (Solicitudes)
+    Sesion --> Pila : usa (Historial)
 ```
 
----
+## 7. Conclusión
 
-## 🎯 Cuándo usar cada TDA
-
-| Necesidad | TDA | Ejemplo |
-|-----------|-----|---------|
-| Deshacer/Rehacer | **Pila** | Historial de acciones |
-| Procesar en orden de llegada | **Cola** | Solicitudes de seguimiento |
-| Búsqueda rápida por clave | **Diccionario** | Buscar cliente por ID |
-| Verificar unicidad | **Conjunto** | Evitar duplicados |
-
----
-
-## 📈 Resumen de Complejidades
-
-| Componente | Estructura | Operación crítica | Complejidad |
-|------------|------------|-------------------|-------------|
-| Almacenamiento clientes | Diccionario (Hash Table) | Búsqueda por ID | **O(1)** |
-| Historial acciones | Pila | Registrar/Deshacer | **O(1)** |
-| Solicitudes | Cola | Agregar/Procesar | **O(1)** |
-| Seguidos por cliente | Diccionario | Consultar/Modificar | **O(1)** |
-
----
-
-## ✅ Conclusión
-
-La selección de estructuras de datos responde a un análisis de los requerimientos funcionales y de eficiencia del sistema. Cada TDA fue elegido considerando:
-
-1. **Naturaleza de las operaciones predominantes**
-2. **Restricciones de complejidad temporal**
-3. **Simplicidad de implementación**
-4. **Escalabilidad del sistema**
-
-El diseño actual garantiza **O(1) para todas las operaciones críticas**, cumpliendo con los requisitos de rendimiento para manejar 1M+ usuarios.
+La selección de estas estructuras de datos específicas permite cumplir con los requisitos no funcionales de rendimiento, proporcionando tiempos de respuesta inmediatos incluso bajo carga simulada de 1.000.000 de registros.

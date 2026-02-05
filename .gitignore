@@ -37,3 +37,4 @@ bin/
 
 # Data (mantener el dataset original, ignorar copias de test)
 data/clientes_TEST.json
+data/clientes_1M.json
