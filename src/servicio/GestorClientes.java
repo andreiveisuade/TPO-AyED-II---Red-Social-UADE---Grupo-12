@@ -41,7 +41,10 @@ public class GestorClientes {
         this(DEFAULT_PATH);
     }
     
-    // Constructor
+    /*
+    Constructor principal.
+    Carga los clientes desde el archivo JSON especificado.
+    */
     public GestorClientes(String dbPath) {
         this.archivoPath = dbPath;
         this.registrarEnHistorial = true;
@@ -49,6 +52,10 @@ public class GestorClientes {
         cargarDesdeArchivo();
     }
     
+    /*
+    Carga los clientes desde un archivo JSON.
+    Si falla, inicia con un sistema vacío.
+    */
     private void cargarDesdeArchivo() {
         System.out.println("Cargando clientes...");
         try (FileReader reader = new FileReader(archivoPath)) {
@@ -71,9 +78,9 @@ public class GestorClientes {
         }
     }
 
-    /**
-     * Guarda estado actual en archivo. Llamar AL SALIR de la app.
-     */
+    /*
+    Guarda estado actual en archivo. Llamar AL SALIR de la app.
+    */
     public void guardarCambios() {
         System.out.println("Guardando datos en " + archivoPath + "...");
         try (FileWriter writer = new FileWriter(archivoPath)) {
@@ -115,6 +122,10 @@ public class GestorClientes {
         return getSesion().estaAutenticado();
     }
     
+    /*
+    Agrega un nuevo cliente al sistema generando su ID.
+    Retorna el ID generado o -1 si falla validación.
+    */
     public int agregarCliente(String nombre, int scoring) {
         ResultadoValidacion validacionNombre = Validador.validarNombre(nombre);
         if (!validacionNombre.esValido()) return -1;
@@ -128,6 +139,9 @@ public class GestorClientes {
         return id;
     }
 
+    /*
+    Agrega un cliente con un ID específico.
+    */
     public boolean agregarClienteConId(int id, String nombre, int scoring) {
         if (id <= 0) return false;
         
@@ -148,10 +162,17 @@ public class GestorClientes {
         return true;
     }
 
+    /*
+    Busca un cliente por su ID.
+    */
     public Cliente buscarPorId(int id) {
         return clientes.obtener(id);
     }
 
+    /*
+    Busca clientes por nombre.
+    Retorna array con las coincidencias.
+    */
     public Cliente[] buscarPorNombre(String nombre) {
         if (nombre == null) return new Cliente[0];
         
@@ -177,14 +198,23 @@ public class GestorClientes {
         return resultado;
     }
 
+    /*
+    Verifica si existe un cliente con el ID dado.
+    */
     public boolean existeCliente(int id) {
         return clientes.contiene(id);
     }
 
+    /*
+    Retorna la cantidad total de clientes registrados.
+    */
     public int getCantidadClientes() {
         return clientes.getCantidad();
     }
 
+    /*
+    Retorna todos los clientes registrados.
+    */
     public Cliente[] obtenerTodosLosClientes() {
         Object[] valores = clientes.obtenerValores();
         Cliente[] resultado = new Cliente[valores.length];
@@ -194,6 +224,9 @@ public class GestorClientes {
         return resultado;
     }
 
+    /*
+    Busca clientes por su scoring de influencia.
+    */
     public Cliente[] buscarPorScoring(int scoring) {
         Object[] todosLosClientes = clientes.obtenerValores();
         
@@ -218,6 +251,10 @@ public class GestorClientes {
         return clientes;
     }
 
+    /*
+    Elimina un cliente del sistema por su ID.
+    Limpia también las referencias en otros clientes (dejar de seguir).
+    */
     public boolean eliminarCliente(int id) {
         Cliente cliente = clientes.obtener(id);
         if (cliente == null) return false;
@@ -257,9 +294,9 @@ public class GestorClientes {
         return false;
     }
 
-    /**
-     * Gestiona el envío de una solicitud de seguimiento y persiste el cambio.
-     */
+    /*
+    Gestiona el envío de una solicitud de seguimiento.
+    */
     public boolean enviarSolicitud(int idSolicitante, int idObjetivo) {
         Cliente solicitante = clientes.obtener(idSolicitante);
         Cliente objetivo = clientes.obtener(idObjetivo);
@@ -277,10 +314,10 @@ public class GestorClientes {
         return true;
     }
 
-    /**
-     * Procesa y acepta una solicitud de seguimiento.
-     * Encapsula la lógica de negocio y persistencia.
-     */
+    /*
+    Procesa y acepta una solicitud de seguimiento.
+    Encapsula la lógica de negocio y persistencia.
+    */
     public boolean aceptarSolicitud(Cliente solicitante, Cliente objetivo, modelo.SolicitudSeguimiento solicitud) {
         if (solicitante == null || objetivo == null || solicitud == null) return false;
         
@@ -292,6 +329,9 @@ public class GestorClientes {
         return resultado;
     }
 
+    /*
+    Registra que un cliente deja de seguir a otro.
+    */
     public boolean dejarDeSeguir(int idSolicitante, int idObjetivo) {
         Cliente cliente = clientes.obtener(idSolicitante);
         if (cliente == null) return false;
@@ -309,7 +349,9 @@ public class GestorClientes {
         return false;
     }
 
-
+    /*
+    Deshace la última acción registrada en el historial de la sesión.
+    */
     public Accion deshacer() {
         if (!sesionValida()) return null;
         HistorialAcciones historial = getSesion().getHistorial();
@@ -322,6 +364,9 @@ public class GestorClientes {
     }
 
 
+    /*
+    Ejecuta la lógica inversa de una acción para deshacerla.
+    */
     private void ejecutarUndo(Accion accion) {
         String[] datos = accion.getDatos();
 
@@ -353,7 +398,9 @@ public class GestorClientes {
     }
 
 
-
+    /*
+    Retorna la última acción realizada por el usuario actual.
+    */
     public Accion verUltimaAccion() {
         if (!sesionValida()) return null;
         return getSesion().getHistorial().verUltima();

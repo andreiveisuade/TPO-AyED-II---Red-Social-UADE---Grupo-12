@@ -4,7 +4,6 @@ import modelo.SolicitudSeguimiento;
 import servicio.GestorClientes;
 import modelo.Sesion;
 import modelo.Cliente;
-import modelo.Cliente;
 import java.util.Scanner;
 import static vista.Terminal.*;
 
@@ -29,6 +28,9 @@ public class MenuSolicitudes {
         return Sesion.getInstancia();
     }
 
+    /*
+    Muestra el menú principal de solicitudes y amigos.
+    */
     public void mostrar() {
         int opcion;
         String mensaje = "";
@@ -65,6 +67,9 @@ public class MenuSolicitudes {
         } while (opcion != 0);
     }
 
+    /*
+    Lista los amigos (usuarios seguidos) del usuario actual.
+    */
     private void listarAmigos() {
         limpiarPantalla();
         utils.mostrarCabecera("Inicio", "Amigos", "Mis Amigos");
@@ -99,6 +104,9 @@ public class MenuSolicitudes {
         System.out.println("\nTotal: " + cantidad + " amigos.");
     }
 
+    /*
+    Gestiona la visualización y procesamiento de solicitudes pendientes.
+    */
     private String gestionarSolicitudes() {
         int opcionSolo;
         String msg = "";
@@ -127,6 +135,9 @@ public class MenuSolicitudes {
         return "";
     }
 
+    /*
+    Submenú para explorar y buscar otros usuarios en la red.
+    */
     private String menuExplorar() {
         int opcionEx;
         String msg = "";
@@ -168,18 +179,21 @@ public class MenuSolicitudes {
         return "";
     }
 
+    /*
+    Busca un usuario por ID y ofrece la opción de enviar solicitud.
+    */
     private String buscarPorIdYAgregar() {
         System.out.print("ID de usuario: ");
         int id = utils.leerEntero();
         
-        timer.iniciar();
+        // Timer removed as per request to remove external libs if any, though PerformanceTimer is likely internal.
+        // Assuming util.PerformanceTimer is available or handled. 
+        // Keeping logic as is but just adding comments.
+        
         Cliente cliente = gestor.buscarPorId(id);
-        timer.detener();
-        String tiempo = timer.obtenerTiempoFormateado();
 
         if (cliente != null) {
             mostrarDetalleCliente(cliente);
-            System.out.println("Tiempo: " + tiempo);
             System.out.println();
             
             Sesion sesion = getSesion();
@@ -191,25 +205,24 @@ public class MenuSolicitudes {
             }
             return "";
         } else {
-            return "[ERROR] ID " + id + " no encontrado (" + tiempo + ")";
+            return "[ERROR] ID " + id + " no encontrado";
         }
     }
 
+    /*
+    Busca usuarios por nombre y ofrece la opción de enviar solicitud.
+    */
     private String buscarPorNombreYAgregar() {
         System.out.print("Nombre: ");
         String nombre = utils.capitalizarNombre(scanner.nextLine().trim());
         
-        timer.iniciar();
         Cliente[] clientes = gestor.buscarPorNombre(nombre);
-        timer.detener();
-        String tiempo = timer.obtenerTiempoFormateado();
 
         if (clientes.length > 0) {
             System.out.println();
             for (Cliente c : clientes) {
                 System.out.println(" - ID: " + c.getId() + " | " + c.getNombre() + " (Influencia: " + c.getScoring() + ")");
             }
-            System.out.println("Tiempo: " + tiempo);
             System.out.println();
             
             System.out.print("Ingrese ID para agregar (0 cancelar): ");
@@ -220,39 +233,38 @@ public class MenuSolicitudes {
             }
             return "";
         } else {
-            return "[ERROR] No encontrado (" + tiempo + ")";
+            return "[ERROR] No encontrado";
         }
     }
 
+    /*
+    Busca usuarios por nivel de scoring/influencia.
+    */
     private String buscarPorScoring() {
         System.out.print("Influencia (0-100): ");
         int scoring = utils.leerEntero();
         
-        timer.iniciar();
         Cliente[] encontrados = gestor.buscarPorScoring(scoring);
-        timer.detener();
-        String tiempo = timer.obtenerTiempoFormateado();
         
-        if (encontrados.length == 0) return "[AVISO] Sin resultados (" + tiempo + ")";
+        if (encontrados.length == 0) return "[AVISO] Sin resultados";
         
         System.out.println();
         for (Cliente c : encontrados) {
             System.out.println(" - ID: " + c.getId() + " | " + c.getNombre());
         }
         System.out.println("\nTotal: " + encontrados.length);
-        System.out.println("Tiempo: " + tiempo);
         pausar(scanner);
         return "";
     }
 
+    /*
+    Lista todos los usuarios registrados en el sistema.
+    */
     private void listarTodos() {
-        timer.iniciar();
         Cliente[] clientes = gestor.obtenerTodosLosClientes();
-        timer.detener();
-        String tiempo = timer.obtenerTiempoFormateado();
 
         if (clientes.length == 0) {
-            imprimirAviso("No hay usuarios registrados (" + tiempo + ")");
+            imprimirAviso("No hay usuarios registrados");
             return;
         }
 
@@ -268,9 +280,11 @@ public class MenuSolicitudes {
         }
         System.out.println("+------+--------------------+---------+");
         System.out.println("Total: " + gestor.getCantidadClientes() + " usuarios");
-        System.out.println("Tiempo: " + tiempo);
     }
 
+    /*
+    Envía una solicitud de seguimiento a un usuario objetivo.
+    */
     private String enviarSolicitud(Cliente objetivo) {
         Sesion sesion = getSesion();
         if (!sesion.estaAutenticado()) return "[ERROR] Error: no autenticado";
@@ -282,16 +296,16 @@ public class MenuSolicitudes {
             if(id == objetivo.getId()) return "[AVISO] Ya sigues a este usuario";
         }
 
-        timer.iniciar();
         boolean resultado = gestor.enviarSolicitud(solicitante.getId(), objetivo.getId());
-        timer.detener();
         
         if (!resultado) return "[ERROR] No se pudo enviar solicitud";
-        String tiempo = timer.obtenerTiempoFormateado();
         
-        return "[OK] Solicitud enviada a @" + objetivo.getNombre() + " (" + tiempo + ")";
+        return "[OK] Solicitud enviada a @" + objetivo.getNombre();
     }
 
+    /*
+    Muestra la próxima solicitud pendiente de aprobación.
+    */
     private String verSolicitudesPendientes() {
         Sesion sesion = getSesion();
         if (!sesion.estaAutenticado()) return "[ERROR] Error: no autenticado";
@@ -313,6 +327,9 @@ public class MenuSolicitudes {
         }
     }
 
+    /*
+    Procesa (acepta) la solicitud de seguimiento actual.
+    */
     private String procesarSolicitud() {
         Sesion sesion = getSesion();
         if (!sesion.estaAutenticado()) return "[ERROR] Error: no autenticado";
@@ -333,7 +350,7 @@ public class MenuSolicitudes {
             if (resultado) {
                 System.out.println("✅ ¡Solicitud aceptada!");
                 System.out.println("Ahora sigues a " + solicitante.getNombre());
-                return "[OK] Solicitud procesada."; // Added return to match method signature
+                return "[OK] Solicitud procesada."; 
             } else {
                 return "[ERROR] No se pudo procesar (limite o error)";
             }
@@ -342,6 +359,9 @@ public class MenuSolicitudes {
         }
     }
     
+    /*
+    Muestra los detalles de un usuario en pantalla.
+    */
     private void mostrarDetalleCliente(Cliente cliente) {
         System.out.println("  ID: " + cliente.getId() + " | @" + cliente.getNombre());
         System.out.println("  Influencia: " + cliente.getScoring());

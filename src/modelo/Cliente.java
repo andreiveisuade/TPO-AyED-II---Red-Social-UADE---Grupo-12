@@ -77,6 +77,9 @@ public class Cliente {
         this.scoring = scoring;
     }
 
+    /*
+    Retorna los IDs de los usuarios seguidos.
+    */
     public int[] getSiguiendo() {
         String[] claves = siguiendo.obtenerClaves();
         int[] ids = new int[claves.length];
@@ -95,6 +98,9 @@ public class Cliente {
     // Método auxiliar para compatibilidad si alguien necesita el diccionario direct (opcional)
     // public tda.Diccionario<Integer, Boolean> getSiguiendoDiccionario() { return siguiendo; }
 
+    /*
+    Retorna la cantidad de usuarios que este cliente sigue.
+    */
     public int getCantidadSiguiendo() {
         return siguiendo.getCantidad();
     }
@@ -161,20 +167,19 @@ public class Cliente {
     ══════════════════════════════════════════════════════════
     */
     
-    /**
-     * Agrega una solicitud de seguimiento a la cola de pendientes.
-     * @param solicitud La solicitud a agregar
-     */
+    /*
+    Agrega una solicitud de seguimiento a la cola de pendientes.
+    */
     public void recibirSolicitud(SolicitudSeguimiento solicitud) {
         if (solicitud != null) {
             solicitudesPendientes.encolar(solicitud);
         }
     }
     
-    /**
-     * Procesa (desencola) la siguiente solicitud pendiente.
-     * @return La solicitud procesada, o null si no hay pendientes
-     */
+    /*
+    Procesa (desencola) la siguiente solicitud pendiente.
+    Retorna null si no hay pendientes.
+    */
     public SolicitudSeguimiento procesarSiguienteSolicitud() {
         if (!solicitudesPendientes.estaVacia()) {
             return solicitudesPendientes.desencolar();
@@ -182,10 +187,10 @@ public class Cliente {
         return null;
     }
     
-    /**
-     * Consulta la siguiente solicitud sin procesarla.
-     * @return La siguiente solicitud, o null si no hay pendientes
-     */
+    /*
+    Consulta la siguiente solicitud sin procesarla.
+    Retorna null si no hay pendientes.
+    */
     public SolicitudSeguimiento verSiguienteSolicitud() {
         if (!solicitudesPendientes.estaVacia()) {
             return solicitudesPendientes.verFrente();
@@ -193,18 +198,16 @@ public class Cliente {
         return null;
     }
     
-    /**
-     * Verifica si tiene solicitudes pendientes.
-     * @return true si hay solicitudes pendientes
-     */
+    /*
+    Verifica si tiene solicitudes pendientes.
+    */
     public boolean tieneSolicitudesPendientes() {
         return !solicitudesPendientes.estaVacia();
     }
     
-    /**
-     * Obtiene la cantidad de solicitudes pendientes.
-     * @return Número de solicitudes en la cola
-     */
+    /*
+    Obtiene la cantidad de solicitudes pendientes.
+    */
     public int getCantidadSolicitudesPendientes() {
         return solicitudesPendientes.getCantidad();  // O(1) en lugar de O(n)
     }
@@ -215,13 +218,11 @@ public class Cliente {
     ══════════════════════════════════════════════════════════
     */
 
-    /**
-     * Serializa las solicitudes pendientes para guardarlas en el JSON.
-     * Complejidad: O(k) donde k es la cantidad de solicitudes pendientes.
-     * Se debe recorrer la cola (copiándola) para no perder el orden ni los datos.
-     * 
-     * @return Array de Strings con formato "solicitante:objetivo"
-     */
+    /*
+    Serializa las solicitudes pendientes para guardarlas en el JSON.
+    Complejidad: O(k) donde k es la cantidad de solicitudes pendientes.
+    Se debe recorrer la cola (copiándola) para no perder el orden ni los datos.
+    */
     public String[] getSolicitudesRecibidasSerialized() {
         if (solicitudesPendientes.estaVacia()) {
             return new String[0];
@@ -252,10 +253,9 @@ public class Cliente {
         return resultado;
     }
 
-    /**
-     * Carga solicitudes desde la persistencia.
-     * @param idsSolicitantes Array de IDs de usuarios que enviaron solicitud.
-     */
+    /*
+    Carga solicitudes desde la persistencia.
+    */
     public void cargarSolicitudes(String[] idsSolicitantes) {
         if (idsSolicitantes == null) return;
         
