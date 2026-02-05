@@ -1,0 +1,95 @@
+@startuml Secuencia: Procesar Solicitud y Deshacer
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+
+title **Diagrama de Secuencia: Procesar Solicitud + Undo**\nAceptar un seguidor y deshacer la acción
+
+actor "Usuario B\n(María, ID: 500)" as userB
+participant "MenuSolicitudes" as menuSol
+participant "Sesion" as sesion
+participant "Cliente B" as clienteB
+participant "Cola<Solicitud>" as cola
+participant "GestorClientes" as gestor
+participant "Cliente A\n(Federico)" as clienteA
+participant "HistorialAcciones" as historial
+participant "Pila<Accion>" as pilaRehacer
+participant "Accion" as accion
+
+== Usuario B ve sus solicitudes pendientes ==
+userB -> menuSol : Solicitudes > Ver pendientes
+menuSol -> sesion : getUsuarioActual()
+sesion --> menuSol : Cliente B (María)
+
+menuSol -> clienteB : verSiguienteSolicitud()
+clienteB -> cola : verFrente()
+cola --> clienteB : Solicitud(solicitante: "100000", objetivo: "500")
+clienteB --> menuSol : Solicitud
+
+menuSol --> userB : "📋 Siguiente: Federico quiere seguirte"
+
+== Procesar (Aceptar) Solicitud ==
+userB -> menuSol : Procesar siguiente
+menuSol -> clienteB : procesarSiguienteSolicitud()
+clienteB -> cola : desencolar()
+cola --> clienteB : Solicitud
+
+menuSol -> gestor : seguir(100000, 500, sesion)
+
+gestor -> clienteA : seguir(500)
+note right of clienteA
+    Cliente A (Federico) ahora
+    sigue a Cliente B (María)
+    en su array siguiendo[]
+end note
+clienteA --> gestor : true
+
+== Registrar en Historial de Sesión ==
+gestor -> accion ** : new Accion(SEGUIR, "100000", "500")
+gestor -> sesion : getHistorial()
+sesion --> gestor : HistorialAcciones
+
+gestor -> historial : registrar(accion)
+historial -> historial : pila.apilar(accion)
+
+gestor -> sesion : getPilaRehacer()
+sesion --> gestor : Pila<Accion>
+gestor -> pilaRehacer : vaciar()
+note right of pilaRehacer
+    Al hacer nueva acción,
+    se borra la pila de rehacer
+end note
+
+gestor --> menuSol : true
+menuSol --> userB : "✓ Aceptaste a @Federico"
+
+== ══════════════════════════════════════ ==
+== DESHACER (Undo) ==
+userB -> menuSol : Historial > Deshacer
+
+menuSol -> gestor : deshacer(sesion)
+
+gestor -> sesion : getHistorial()
+sesion --> gestor : HistorialAcciones
+
+gestor -> historial : extraerUltima()
+historial -> historial : pila.desapilar()
+historial --> gestor : Accion(SEGUIR, "100000", "500")
+
+gestor -> gestor : ejecutarUndo(accion)
+note right of gestor
+    Interpreta la acción:
+    SEGUIR → llamar dejarDeSeguir
+end note
+
+gestor -> clienteA : dejarDeSeguir(500)
+clienteA --> gestor : true
+
+gestor -> sesion : getPilaRehacer()
+sestor --> gestor : Pila<Accion>
+gestor -> pilaRehacer : apilar(accion)
+
+gestor --> menuSol : Accion (la que se deshizo)
+menuSol --> userB : "✓ Deshecho: SEGUIR 100000 → 500"
+
+@enduml

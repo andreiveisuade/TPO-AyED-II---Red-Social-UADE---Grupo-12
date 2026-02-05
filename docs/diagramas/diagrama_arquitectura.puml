@@ -1,0 +1,125 @@
+@startuml Arquitectura del Sistema
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam componentStyle rectangle
+skinparam defaultFontSize 12
+skinparam packageBorderColor #555
+skinparam packageFontSize 14
+skinparam packageFontStyle bold
+
+title **Diagrama de Arquitectura - Red Social UADE**\nArquitectura en Capas (Singleton + Lazy Loading)
+
+' ==========================================
+' CAPA DE PRESENTACIÓN (VISTA)
+' ==========================================
+package "Capa Vista" as vista #E3F2FD {
+    component [Menu\n<font size="10">Coordinador Principal</font>] as menu #BBDEFB
+    component [MenuSolicitudes\n<font size="10">Menú Unificado</font>\n<font size="9" color="gray">Amigos + Explorar + Solicitudes</font>] as menuSolicitudes #BBDEFB
+    component [MenuHistorial\n<font size="10">Historial/Undo/Redo</font>] as menuHistorial #BBDEFB
+    component [Terminal\n<font size="10">Utilidades UI</font>] as terminal #90CAF9
+    component [MenuUtils\n<font size="10">Entrada/Salida</font>] as menuUtils #90CAF9
+}
+
+' ==========================================
+' CAPA DE LÓGICA DE NEGOCIO (SERVICIOS)
+' ==========================================
+package "Capa Servicio" as servicio #E8F5E9 {
+    component [GestorClientes\n<font size="10">Lógica de Clientes</font>\n<font size="9" color="gray">CRUD + Seguimiento</font>] as gestor #A5D6A7
+    component [HistorialAcciones\n<font size="10">Wrapper de Pila</font>] as historialAcciones #A5D6A7
+}
+
+' ==========================================
+' CAPA DE MODELO (ENTIDADES DE DOMINIO)
+' ==========================================
+package "Capa Modelo" as modelo #FFF3E0 {
+    component [<<Singleton>>\nSesion\n<font size="10">Estado de Usuario</font>\n<font size="9" color="gray">+ Historial por sesión</font>] as sesion #FFB74D
+    component [Cliente\n<font size="10">Entidad Principal</font>\n<font size="9" color="gray">+ Cola de solicitudes</font>] as cliente #FFCC80
+    component [Accion\n<font size="10">Registro de Operación</font>] as accion #FFCC80
+    component [SolicitudSeguimiento\n<font size="10">Value Object</font>] as solicitud #FFCC80
+    component [TipoAccion\n<font size="10"><<enum>></font>] as tipoAccion #FFE0B2
+}
+
+' ==========================================
+' CAPA DE TDA (ESTRUCTURAS DE DATOS)
+' ==========================================
+package "Capa TDA" as tda #F3E5F5 {
+    component [Diccionario<K,V>\n<font size="10">Hash Table O(1)</font>] as diccionario #CE93D8
+    component [Pila<T>\n<font size="10">LIFO Stack O(1)</font>] as pila #CE93D8
+    component [Cola<T>\n<font size="10">FIFO Queue O(1)</font>] as cola #CE93D8
+}
+
+' ==========================================
+' PERSISTENCIA (Directa)
+' ==========================================
+database "clientes_1M.json" as jsonFile #FFCDD2
+
+' ==========================================
+' RELACIONES ENTRE CAPAS
+' ==========================================
+' Main → Vista
+[Main] --> menu : iniciar()
+
+' Composición dentro de Vista
+menu --> menuSolicitudes : delega
+menu --> menuHistorial : delega
+menuSolicitudes ..> terminal : usa
+menuHistorial ..> terminal : usa
+menuSolicitudes ..> menuUtils : usa
+menuHistorial ..> menuUtils : usa
+
+' Vista → Servicio (sin pasar Sesion como parámetro)
+menu --> gestor : CRUD clientes
+menu ..> sesion : "Sesion.getInstancia()"
+menuSolicitudes --> gestor
+menuSolicitudes ..> sesion : "Sesion.getInstancia()"
+menuHistorial --> gestor : undo/redo
+menuHistorial ..> sesion : "Sesion.getInstancia()"
+
+' Servicio usa Singleton
+gestor ..> sesion : "Sesion.getInstancia()\npara undo/redo"
+gestor --> cliente : crea/gestiona
+gestor --> accion : crea para registrar
+
+' Modelo interno
+sesion --> cliente : "usuarioActual"
+sesion --> historialAcciones : "historial de sesión"
+sesion --> pila : "pilaRehacer"
+cliente --> solicitud : "cola interna"
+cliente --> cola : "solicitudesPendientes"
+accion --> tipoAccion : tipo
+
+' Servicio → TDA
+gestor --> diccionario : "clientes<ID, Cliente>"
+historialAcciones --> pila : "Pila<Accion>"
+
+' Persistencia (Simulada Directa)
+gestor --> jsonFile : "Lee al inicio\nEscribe al salir"
+
+' ==========================================
+' NOTAS
+' ==========================================
+note right of sesion
+    <b>Patrón Singleton:</b>
+    Sesion.getInstancia()
+    Garantiza única instancia.
+    Vista y Servicio acceden
+    sin pasarla como parámetro.
+end note
+
+note right of menuSolicitudes
+    <b>Menú Unificado:</b>
+    1. Mis Amigos (siguiendo)
+    2. Solicitudes (pendientes)
+    3. Explorar (buscar/listar)
+end note
+
+legend bottom
+    |= Color |= Capa |= Responsabilidad |
+    | <#E3F2FD> | Vista | UI y coordinación |
+    | <#E8F5E9> | Servicio | Lógica de negocio |
+    | <#FFF3E0> | Modelo | Entidades y estado (Singleton) |
+    | <#F3E5F5> | TDA | Estructuras O(1) |
+    | <#FFEBEE> | Persistencia | Lazy Loading |
+end legend
+
+@enduml

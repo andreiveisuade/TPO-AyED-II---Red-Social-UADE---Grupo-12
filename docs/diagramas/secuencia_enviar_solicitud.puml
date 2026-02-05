@@ -1,0 +1,59 @@
+@startuml Secuencia: Enviar Solicitud de Seguimiento
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+
+title **Diagrama de Secuencia: Enviar Solicitud de Seguimiento**\nUsuario A quiere seguir a Usuario B
+
+actor "Usuario A\n(sesión activa)" as userA
+participant "MenuSolicitudes" as menuSol
+participant "Sesion" as sesion
+participant "GestorClientes" as gestor
+participant "JsonLoader" as loader
+database "clientes_1M.json" as json
+participant "Cliente B\n(objetivo)" as clienteB
+participant "SolicitudSeguimiento" as solicitud
+participant "Cola<Solicitud>" as cola
+
+== Usuario A navega al menú ==
+userA -> menuSol : Explorar > Buscar por ID
+menuSol -> userA : "ID de usuario: "
+userA -> menuSol : ingresar ID 500 (Usuario B)
+
+== Buscar Usuario B (puede requerir Lazy Loading) ==
+menuSol -> gestor : buscarPorId(500)
+gestor --> menuSol : null (no en memoria)
+
+menuSol -> loader : cargarClienteEspecifico(500, ruta, gestor)
+loader -> json : leer hasta id: 500
+loader -> gestor : agregarClienteConId(500, "María", 92)
+loader --> menuSol : true
+
+menuSol -> gestor : buscarPorId(500)
+gestor --> menuSol : Cliente B (María)
+
+menuSol --> userA : Mostrar: "ID: 500 | María | Influencia: 92"
+menuSol --> userA : "¿Enviar solicitud? (1: Si, 0: No)"
+userA -> menuSol : 1 (Si)
+
+== Crear y Enviar Solicitud ==
+menuSol -> sesion : getUsuarioActual()
+sesion --> menuSol : Cliente A (Federico, ID: 100000)
+
+menuSol -> solicitud ** : new SolicitudSeguimiento("100000", "500")
+note right of solicitud
+    solicitante = "100000" (A)
+    objetivo = "500" (B)
+end note
+
+menuSol -> clienteB : recibirSolicitud(solicitud)
+clienteB -> cola : encolar(solicitud)
+note right of cola
+    La solicitud va a la cola
+    del Cliente B (objetivo),
+    NO del solicitante.
+end note
+
+menuSol --> userA : "✓ Solicitud enviada a @María"
+
+@enduml

@@ -1,0 +1,119 @@
+@startuml Interfaces y Clases Principales
+!theme plain
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+title **Diagrama de Clases Simplificado**\nRelaciones principales del sistema
+
+' ==========================================
+' MODELO - Sesion (Centro del sistema)
+' ==========================================
+class Sesion {
+    - usuarioActual: Cliente
+    - estaAutenticado: boolean
+    - historial: HistorialAcciones
+    - pilaRehacer: Pila<Accion>
+    __
+    + iniciarSesion(cliente: Cliente): void
+    + cerrarSesion(): void
+    + estaAutenticado(): boolean
+    + getUsuarioActual(): Cliente
+    + getHistorial(): HistorialAcciones
+    + getPilaRehacer(): Pila<Accion>
+    + tieneSolicitudesPendientes(): boolean
+    + getCantidadSolicitudesPendientes(): int
+}
+
+' ==========================================
+' MODELO - Cliente
+' ==========================================
+class Cliente {
+    - id: int
+    - nombre: String
+    - scoring: int
+    - siguiendo: int[2]
+    - cantidadSiguiendo: int
+    - solicitudesPendientes: Cola<SolicitudSeguimiento>
+    __
+    + seguir(idObjetivo: int): boolean
+    + dejarDeSeguir(idObjetivo: int): boolean
+    + recibirSolicitud(solicitud: SolicitudSeguimiento): void
+    + procesarSiguienteSolicitud(): SolicitudSeguimiento
+    + getCantidadSolicitudesPendientes(): int
+}
+
+' ==========================================
+' SERVICIO - GestorClientes
+' ==========================================
+class GestorClientes {
+    - clientes: Diccionario<Integer, Cliente>
+    - proximoId: int
+    __
+    + agregarCliente(nombre: String, scoring: int): int
+    + buscarPorId(id: int): Cliente
+    + buscarPorNombre(nombre: String): Cliente[]
+    + buscarPorScoring(scoring: int): Cliente[]
+    + eliminarCliente(id: int): boolean
+    __
+    <color:blue>Requieren Sesion:</color>
+    + seguir(idSol: int, idObj: int, sesion: Sesion): boolean
+    + dejarDeSeguir(idSol: int, idObj: int, sesion: Sesion): boolean
+    + deshacer(sesion: Sesion): Accion
+    + rehacer(sesion: Sesion): Accion
+    + getCantidadAcciones(sesion: Sesion): int
+}
+
+' ==========================================
+' SERVICIO - HistorialAcciones
+' ==========================================
+class HistorialAcciones {
+    - historial: Pila<Accion>
+    __
+    + registrar(accion: Accion): void
+    + extraerUltima(): Accion
+    + verUltima(): Accion
+    + estaVacio(): boolean
+    + getCantidad(): int
+    + obtenerTodas(): Accion[]
+}
+
+' ==========================================
+' PERSISTENCIA - JsonLoader
+' ==========================================
+class JsonLoader {
+    + cargarClienteEspecifico(id: int, ruta: String, gestor: GestorClientes): boolean
+}
+
+' ==========================================
+' RELACIONES
+' ==========================================
+Sesion *-- "1" Cliente : usuarioActual
+Sesion *-- "1" HistorialAcciones : historial
+Sesion *-- "1" "Pila<Accion>" : pilaRehacer
+
+Cliente *-- "1" "Cola<SolicitudSeguimiento>" : solicitudesPendientes
+
+GestorClientes o-- "*" Cliente : gestiona
+GestorClientes ..> Sesion : "recibe como parámetro"
+
+JsonLoader ..> GestorClientes : carga en
+
+' ==========================================
+' NOTAS
+' ==========================================
+note bottom of GestorClientes
+    <b>Patrón modificado:</b>
+    Los métodos que modifican estado
+    (seguir, deshacer, etc.) ahora
+    reciben Sesion para registrar
+    en el historial correcto.
+end note
+
+note right of Sesion
+    <b>Responsabilidad ampliada:</b>
+    Sesion ahora es dueña del
+    historial y pila de rehacer.
+    Esto permite undo/redo por usuario.
+end note
+
+@enduml

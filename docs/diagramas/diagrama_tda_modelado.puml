@@ -1,0 +1,298 @@
+@startuml Modelado TDA del Sistema
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam classAttributeIconSize 0
+skinparam defaultFontSize 11
+skinparam classFontSize 13
+skinparam stereotypeFontSize 10
+
+title **Diagrama de Modelado y TDAs**\nTipos Abstractos de Datos Empleados
+
+' ==========================================
+' ENTIDADES DE DOMINIO
+' ==========================================
+package "modelo" #FFF3E0 {
+    
+    class Sesion <<Singleton>> {
+        - {static} instancia: Sesion
+        - usuarioActual: Cliente
+        - estaAutenticado: boolean
+        - historial: HistorialAcciones
+        - pilaRehacer: Pila<Accion>
+        __
+        - Sesion()
+        + {static} getInstancia(): Sesion
+        + iniciarSesion(Cliente): void
+        + cerrarSesion(): void
+        + getHistorial(): HistorialAcciones
+        + getPilaRehacer(): Pila<Accion>
+        __
+        <color:gray>Patrón Singleton: única instancia</color>
+        <color:gray>• Constructor privado</color>
+        <color:gray>• Acceso via getInstancia()</color>
+    }
+    
+    class Cliente {
+        - id: int
+        - nombre: String
+        - scoring: int
+        - siguiendo: Diccionario<Integer, Boolean>
+        - solicitudesPendientes: Cola<SolicitudSeguimiento>
+        __
+        + seguir(int): boolean
+        + dejarDeSeguir(int): boolean
+        + recibirSolicitud(SolicitudSeguimiento): void
+        + procesarSiguienteSolicitud(): SolicitudSeguimiento
+        + getCantidadSolicitudesPendientes(): int
+        __
+        <color:gray>Invariantes:</color>
+        <color:gray>• id > 0</color>
+        <color:gray>• 0 ≤ scoring ≤ 100</color>
+    }
+    
+    class Accion {
+        - tipo: TipoAccion
+        - datos: String[]
+        - timestamp: LocalDateTime
+        __
+        + getTipo(): TipoAccion
+        + getDatos(): String[]
+        + getTimestamp(): LocalDateTime
+        + getDetalle(): String
+        __
+        <color:gray>Inmutable después de creación</color>
+    }
+    
+    enum TipoAccion {
+        AGREGAR_CLIENTE
+        ELIMINAR_CLIENTE
+        SEGUIR
+        DEJAR_DE_SEGUIR
+    }
+    
+    class SolicitudSeguimiento {
+        - solicitante: String
+        - objetivo: String
+        __
+        + getSolicitante(): String
+        + getObjetivo(): String
+        + getClave(): String
+        __
+        <color:gray>Value Object (inmutable)</color>
+    }
+    
+    Accion --> TipoAccion : tipo
+    Sesion *-- Cliente : usuarioActual
+    Cliente --> SolicitudSeguimiento : encola
+}
+
+' ==========================================
+' TDA PILA (LIFO)
+' ==========================================
+package "tda" #F3E5F5 {
+    
+    class "Pila<T>" as Pila <<TDA>> {
+        - tope: NodoPila<T>
+        - cantidad: int
+        ==
+        + apilar(T): void
+        + desapilar(): T
+        + verTope(): T
+        + estaVacia(): boolean
+        + getCantidad(): int
+        ==
+        <b>Complejidad</b>
+        apilar: O(1)
+        desapilar: O(1)
+        verTope: O(1)
+        ==
+        <color:blue>LIFO</color>
+    }
+    
+    class NodoPila<T> {
+        - dato: T
+        - siguiente: NodoPila<T>
+    }
+    
+    Pila --> NodoPila : tope →
+    NodoPila --> NodoPila : siguiente →
+    
+    ' ==========================================
+    ' TDA COLA (FIFO)
+    ' ==========================================
+    
+    class "Cola<T>" as Cola <<TDA>> {
+        - frente: NodoCola<T>
+        - fin: NodoCola<T>
+        - cantidad: int
+        ==
+        + encolar(T): void
+        + desencolar(): T
+        + verFrente(): T
+        + estaVacia(): boolean
+        + getCantidad(): int
+        ==
+        <b>Complejidad</b>
+        encolar: O(1)
+        desencolar: O(1)
+        ==
+        <color:green>FIFO</color>
+    }
+    
+    class NodoCola<T> {
+        - dato: T
+        - siguiente: NodoCola<T>
+    }
+    
+    Cola --> NodoCola : frente →
+    Cola --> NodoCola : fin →
+    
+    ' ==========================================
+    ' TDA DICCIONARIO (HASH TABLE)
+    ' ==========================================
+    
+    class "Diccionario<K,V>" as Diccionario <<TDA>> {
+        - tabla: NodoDiccionario<K,V>[]
+        - cantidad: int
+        - CAPACIDAD: int = 64
+        ==
+        + insertar(K, V): void
+        + obtener(K): V
+        + contiene(K): boolean
+        + eliminar(K): V
+        + getCantidad(): int
+        + obtenerClaves(): K[]
+        + obtenerValores(): V[]
+        ==
+        <b>Complejidad</b>
+        insertar: O(1) amortizado
+        obtener: O(1) amortizado
+        ==
+        <color:purple>Hash Table</color>
+    }
+    
+    class "NodoDiccionario<K,V>" as NodoDiccionario {
+        - clave: K
+        - valor: V
+        - siguiente: NodoDiccionario<K,V>
+    }
+    
+    Diccionario --> NodoDiccionario : tabla[] →
+    NodoDiccionario --> NodoDiccionario : siguiente →
+}
+
+' ==========================================
+' CAPA DE SERVICIO
+' ==========================================
+package "servicio" #E8F5E9 {
+    
+    class GestorClientes {
+        + {static} DATA_PATH: String
+        - clientes: Diccionario<Integer, Cliente>
+        - proximoId: int
+        ==
+        + agregarCliente(String, int): int
+        + buscarPorId(int): Cliente
+        + buscarOCargar(int): Cliente
+        + eliminarCliente(int): boolean
+        ==
+        <color:blue>Sin parámetro Sesion:</color>
+        + seguir(int, int): boolean
+        + dejarDeSeguir(int, int): boolean
+        + deshacer(): Accion
+        + rehacer(): Accion
+        ==
+        <color:gray>Usa Sesion.getInstancia()</color>
+    }
+    
+    class HistorialAcciones {
+        - historial: Pila<Accion>
+        ==
+        + registrar(Accion): void
+        + extraerUltima(): Accion
+        + verUltima(): Accion
+        + estaVacio(): boolean
+        + getCantidad(): int
+        + obtenerTodas(): Accion[]
+    }
+}
+
+' ==========================================
+' RELACIONES PRINCIPALES CON CARDINALIDADES
+' ==========================================
+
+' GestorClientes
+GestorClientes "1" --> "1" Diccionario : "clientes\n<Integer, Cliente>"
+GestorClientes ..> "0..*" Cliente : "gestiona"
+GestorClientes ..> "1" Sesion : "usa (Singleton)"
+GestorClientes ..> "0..*" Accion : "crea"
+
+' Sesion (Singleton)
+Sesion "1" *-- "1" HistorialAcciones : "historial"
+Sesion "1" *-- "1" Pila : "pilaRehacer\n<Accion>"
+Sesion "1" o-- "0..1" Cliente : "usuarioActual"
+
+' HistorialAcciones
+HistorialAcciones "1" --> "1" Pila : "usa internamente\n<Accion>"
+
+' Cliente
+Cliente "1" *-- "1" Cola : "solicitudesPendientes\n<SolicitudSeguimiento>"
+Cliente "1" *-- "1" Diccionario : "siguiendo\n<Integer, Boolean>"
+
+' Accion
+Accion "1" --> "1" TipoAccion : "tiene tipo"
+
+' TDAs Internos
+Diccionario "1" *-- "0..*" NodoDiccionario
+Pila "1" *-- "0..1" NodoPila
+Cola "1" *-- "0..1" NodoCola
+
+NodoPila "1" --> "0..1" NodoPila : "siguiente"
+NodoCola "1" --> "0..1" NodoCola : "siguiente"
+NodoDiccionario "1" --> "0..1" NodoDiccionario : "siguiente"
+
+' ==========================================
+' NOTAS EXPLICATIVAS
+' ==========================================
+
+note as N1
+<b>¿Por qué estos TDAs?</b>
+
+<b>Diccionario (Hash Table)</b>
+• Búsqueda de clientes O(1) por ID
+• Clave: Integer (ID), Valor: Cliente
+
+<b>Pila (LIFO)</b>
+• 2 usos: Historial (undo) y pilaRehacer (redo)
+• Última acción = primera en deshacerse
+
+<b>Cola (FIFO)</b>
+• Solicitudes de seguimiento en cada Cliente
+• Primera solicitud = primera atendida
+end note
+
+note as N2
+<b>Patrón Singleton en Sesion</b>
+
+Constructor privado + getInstancia()
+garantizan una única sesión activa.
+
+<b>Ventaja:</b> GestorClientes no necesita
+recibir Sesion como parámetro.
+API más limpia y simple.
+end note
+
+legend bottom
+|= TDA |= Política |= Uso Principal |= Ubicación |
+| Pila | LIFO | Historial + Rehacer | Sesion (Singleton) |
+| Cola | FIFO | Solicitudes pendientes | Cliente |
+| Diccionario | Hash | Clientes por ID | GestorClientes |
+
+|= Relación |= Símbolo |= Significado |
+| Composición | *-- | Parte vital (muere con el todo) |
+| Agregación | o-- | Parte referenciada (vive independientemente) |
+| Asociación | --> | Relación estructural fuerte |
+| Dependencia | ..> | Uso temporal ('usa', 'crea') |
+end legend
+
+@enduml
