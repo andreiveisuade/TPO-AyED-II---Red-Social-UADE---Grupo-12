@@ -1,403 +1,66 @@
 # Arquitectura del Sistema
 
-Descripción técnica detallada de patrones, principios y decisiones de diseño.
+Este documento detalla la arquitectura de software implementada, justificando las decisiones de diseño, los patrones aplicados y el cumplimiento de principios de ingeniería de software.
 
----
+## 1. Estructura y Capas
 
-## 📐 Arquitectura en Capas
+El sistema adopta una arquitectura en capas estricta para garantizar la **separación de responsabilidades** (SoC) y facilitar la mantenibilidad. El flujo de dependencia es unidireccional descendente.
 
-El proyecto implementa **separación de responsabilidades** con flujo unidireccional:
-
-```
-┌─────────────────────────────────────────────────┐
-│              CAPA VISTA                         │
-│  (Menu, MenuSolicitudes, MenuHistorial)         │
-└────────────────┬────────────────────────────────┘
-                 │ usa
-                 ▼
-┌─────────────────────────────────────────────────┐
-│              CAPA LOGICA                        │
-│           (Servicio + Modelo)                   │
-│ (GestorClientes, Cliente, Sesion)               │
-└────────────────┬────────────────────────────────┘
-                 │ gestiona
-                 ▼
-┌─────────────────────────────────────────────────┐
-│              CAPA TDA                           │
-│    (Diccionario, Pila, Cola)                    │
-└─────────────────────────────────────────────────┘
+### Diagrama de Dependencias
+```mermaid
+VISTA --> SERVICIO --> MODELO --> TDA
 ```
 
-**Regla de oro**: Las capas superiores usan las inferiores, **nunca al revés**.
-
----
-
-## 🎯 Patrones de Diseño
-
-### 1. Singleton (Creacional)
-
-**Clase**: `Sesion`
-
-**Implementación**:
-```java
-public class Sesion {
-    private static Sesion instancia;
-    
-    private Sesion() { /* constructor privado */ }
-    
-    public static Sesion getInstancia() {
-        if (instancia == null) {
-            instancia = new Sesion();
-        }
-        return instancia;
-    }
-}
-```
-
-**Justificación**: 
-- Garantiza única sesión activa en el sistema
-- Simplifica API eliminando paso de `Sesion` como parámetro
-
-**Beneficio**:
-```java
-// Antes (sin Singleton)
-gestor.seguir(id1, id2, sesion);
-
-// Ahora (con Singleton)
-gestor.seguir(id1, id2);  // Sesion.getInstancia() internamente
-```
-
----
-
-### 2. Facade (Estructural)
-
-**Clase**: `GestorClientes`
-
-**Responsabilidad**: Interfaz simplificada para operaciones complejas con múltiples TDAs.
-
-**Ejemplo**:
-```java
-public boolean seguir(int idSolicitante, int idObjetivo) {
-    // 1. Busca en Diccionario
-    Cliente solicitante = clientes.obtener(idSolicitante);
-    Cliente objetivo = clientes.obtener(idObjetivo);
-    
-    // 2. Modifica Cliente
-    if (solicitante.seguir(idObjetivo)) {
-        // 3. Registra en Historial (Pila)
-        Accion accion = new Accion(TipoAccion.SEGUIR, ...);
-        Sesion.getInstancia().getHistorial().registrar(accion);
-        return true;
-    }
-    return false;
-}
-```
-
-**Beneficio**: La vista no necesita conocer la complejidad interna.
-
----
-
-### 3. Value Object (Estructural)
-
-**Clases**: `SolicitudSeguimiento`, `ResultadoValidacion`
-
-**Características**:
-- Inmutables (todos los atributos `final`)
-- Sin identidad propia (igualdad por valor)
-- No tienen lógica de negocio compleja
-
-**Ejemplo**:
-```java
-public class SolicitudSeguimiento {
-    private final String solicitante;
-    private final String objetivo;
-    
-    public SolicitudSeguimiento(String solicitante, String objetivo) {
-        this.solicitante = solicitante;
-        this.objetivo = objetivo;
-    }
-    
-    // Solo getters, sin setters
-}
-```
-
-**Beneficio**: Seguridad ante modificaciones accidentales.
-
----
-
-### 4. Static Utility (Estructural)
-
-**Clases**: `Validador`, `Terminal`
-
-**Características**:
-- Constructor privado
-- Todos los métodos `static`
-- Sin estado interno
-
-**Ejemplo**:
-```java
-public class Validador {
-    private Validador() {}  // No instanciable
-    
-    public static ResultadoValidacion validarNombre(String nombre) {
-        if (nombre == null) {
-            return ResultadoValidacion.error("El nombre no puede ser nulo");
-        }
-        if (nombre.trim().isEmpty()) {
-            return ResultadoValidacion.error("El nombre no puede estar vacío");
-        }
-        return ResultadoValidacion.ok();
-    }
-}
-```
-
-**Beneficio**: Centraliza lógica reutilizable sin necesidad de instancias.
-
----
-
-## 🔐 Principios SOLID
-
-### Single Responsibility Principle (SRP)
-- `GestorClientes`: Solo gestiona clientes
-- `HistorialAcciones`: Solo gestiona historial
-- `Validador`: Solo valida datos
-- Cada menú tiene una responsabilidad específica
-
-### Open/Closed Principle (OCP)
-- `TipoAccion` (enum): Cerrado para modificación, abierto para extensión
-- TDAs genéricos: Reutilizables sin modificar código
-
-### Dependency Inversion Principle (DIP)
-- Vista depende de abstracciones (interfaces conceptuales)
-- `GestorClientes` no conoce detalles de UI
-- TDAs implementan interfaces (`IPila`, `ICola`, `IDiccionario`)
-
----
-
-## 🎓 Principios GRASP
-
-### Information Expert
-- `Cliente` conoce sus propios seguidos → método `seguir()`
-- `Diccionario` conoce sus claves → método `contiene()`
-- `Sesion` conoce su estado de autenticación
-
-### Creator
-- `GestorClientes` crea instancias de `Cliente` y `Accion`
-- `Cliente` crea instancias de `Cola<SolicitudSeguimiento>`
-
-### Low Coupling
-- Vista no conoce TDAs directamente
-- Modelo no conoce Vista
-- Capas desacopladas mediante interfaces claras
-
-### High Cohesion
-- Cada clase tiene responsabilidades relacionadas
-- Métodos de una clase trabajan sobre los mismos datos
-
----
-
-## ⚙️ Características Técnicas
-
-### 1. Carga Inicial y Persistencia Simple
-
-**Estrategia**: Carga total en RAM al inicio, guardado total al salir.
-
-**Implementación**:
-```java
-// GestorClientes
-public void cargarDesdeArchivo() {
-    // Lee JSON completo -> Diccionario (RAM)
-}
-
-public void guardarCambios() {
-    // Diccionario (RAM) -> Sobrescribe JSON
-}
-```
-
-**Beneficio**: 
-- Elimina complejidad de DAOs y DTOs.
-- Todas las operaciones en tiempo de ejecución son 100% en memoria (O(1)).
-- Persistencia garantizada al cerrar la sesión.
-
-**Complejidad**:
-- Carga/Guardado: O(N) (solo al inicio y fin)
-- Operaciones (Seguir, Buscar): O(1) (siempre)
-
----
-
-### 2. Undo/Redo (Command Pattern)
-
-**Implementación**: Dos pilas en `Sesion`
-
-```java
-public class Sesion {
-    private HistorialAcciones historial;  // Pila de acciones realizadas
-    private Pila<Accion> pilaRehacer;     // Pila de acciones deshechas
-}
-```
-
-**Flujo**:
-1. **Acción ejecutada** → se apila en `historial`
-2. **Undo** → se extrae de `historial`, se revierte, se apila en `pilaRehacer`
-3. **Redo** → se extrae de `pilaRehacer`, se re-ejecuta, se apila en `historial`
-
-**Complejidad**: O(1) para todas las operaciones.
-
-**Ejemplo**:
-```java
-// Ejecutar acción
-gestor.seguir(1001, 5000);  // Se registra automáticamente
-
-// Deshacer
-Accion accion = gestor.deshacer();  // Revierte y mueve a pilaRehacer
-
-// Rehacer
-gestor.rehacer();  // Re-ejecuta y mueve a historial
-```
-
----
-
-### 3. Validación Centralizada (DRY)
-
-**Clase**: `Validador`
-
-**Beneficio**: Evita duplicación de lógica de validación.
-
-**Ejemplo**:
-```java
-// En Cliente.java
-ResultadoValidacion validacion = Validador.validarNombre(nombre);
-if (!validacion.esValido()) {
-    throw new IllegalArgumentException(validacion.getMensajeError());
-}
-```
-
-**Validaciones disponibles**:
-- `validarNombre(String)`: No nulo, no vacío
-- `validarScoring(int)`: Rango [0, 100]
-- `validarNombresDistintos(String, String)`: Case-insensitive
-
----
-
-## 🔧 Decisiones de Diseño
-
-### ¿Por qué Singleton para Sesion?
-
-**Alternativa considerada**: Inyección de dependencias (pasar `Sesion` como parámetro)
-
-**Decisión**: Singleton
-
-**Razones**:
-- Garantiza única sesión activa (requisito del dominio)
-- Simplifica API (menos parámetros)
-- Apropiado para un TP académico que demuestra patrones
-
----
-
-### ¿Por qué TDAs propios en lugar de java.util?
-
-**Decisión**: Implementación propia de `Diccionario`, `Pila`, `Cola`
-
-**Razones**:
-- Requisito académico (demostrar conocimiento de estructuras)
-- Control total sobre complejidad algorítmica
-- Aprendizaje profundo de implementación
-
----
-
-### ¿Por qué no usar base de datos?
-
-**Decisión**: JSON + In-Memory
-
-**Razones**:
-- Simplicidad para entorno académico.
-- Velocidad extrema (operaciones en RAM).
-- Facilidad de debug (archivo legible).
-
----
-
-### ¿Por qué Hash Table con capacidad fija 64?
-
-**Decisión**: No implementar rehashing
-
-**Razones**:
-- Suficiente para carga típica (< 100 clientes en memoria simultánea)
-- Evita complejidad de rehashing
-- Mantiene O(1) amortizado con buen factor de carga
-
-**Cálculo**:
-```
-Factor de carga = n / m
-Donde: n = elementos, m = capacidad
-
-Con 50 clientes en memoria:
-Factor = 50 / 64 = 0.78  ✅ Aceptable (< 0.75 ideal)
-```
-
----
-
-## 📊 Invariantes de Representación
-
-### Cliente
-- `id > 0`
-- `nombre != null && !nombre.trim().isEmpty()`
-- `0 <= scoring <= 100`
-- `siguiendo != null`
-- Ningún cliente se sigue a sí mismo
-
-### Sesion
-- Si autenticado → `usuarioActual != null`
-- `historial != null`
-- `pilaRehacer != null`
-
-### Diccionario
-- `cantidad >= 0`
-- `(primero == null) <==> (cantidad == 0)`
-- No existen claves duplicadas
-
-### Pila
-- `cantidad >= 0`
-- `(tope == null) <==> (cantidad == 0)`
-
-### Cola
-- `cantidad >= 0`
-- `(frente == null) <==> (fin == null) <==> (cantidad == 0)`
-
----
-
-## 🎯 Flujo de Datos
-
-```
-Usuario → Menu → GestorClientes → Diccionario<ID, Cliente>
-                      ↓
-                  Sesion.getInstancia()
-                      ↓
-              HistorialAcciones (Pila)
-```
-
----
-
-## 📈 Métricas del Proyecto
-
-| Métrica | Valor |
-|---------|-------|
-| Capas arquitectónicas | 4 (Vista, Servicio, Modelo, TDA) |
-| Clases totales | ~20 |
-| TDAs implementados | 3 (Diccionario, Pila, Cola) |
-| Patrones de diseño | 4 (Singleton, Value Object, Facade, Static Utility) |
-| Complejidad promedio | O(1) para operaciones críticas |
-| Dataset soportado | 1M+ clientes |
-
----
-
-## ✅ Conclusión
-
-El sistema implementa una arquitectura limpia y mantenible mediante:
-
-1. **Separación en capas** con responsabilidades claras
-2. **Patrones de diseño** aplicados con criterio (sin sobre-ingeniería)
-3. **Principios SOLID/GRASP** para código extensible
-4. **TDAs eficientes** con complejidad O(1) en operaciones críticas
-5. **Optimizaciones** (Lazy Loading) para manejar grandes volúmenes de datos
-
-La arquitectura permite agregar nuevas funcionalidades sin modificar código existente, cumpliendo con los principios de diseño orientado a objetos.
+1.  **Capa Vista (Presentación)**: Responsable de la interacción con el usuario a través de la consola. No contiene lógica de negocio.
+2.  **Capa Servicio (Lógica de Negocio)**: Gestiona casos de uso complejos (`GestorClientes`). Actúa como fachada para el modelo de dominio.
+3.  **Capa Modelo (Dominio)**: Representa las entidades del negocio (`Cliente`, `Sesion`) y sus reglas fundamentales.
+4.  **Capa TDA (Infraestructura de Datos)**: Provee las estructuras de datos fundamentales (`Diccionario`, `Pila`, `Cola`) optimizadas para el problema.
+
+## 2. Patrones de Diseño
+
+Se han seleccionado patrones específicos para resolver problemas recurrentes de manera estándar y eficiente.
+
+### 2.1. Singleton (Creacional)
+*   **Componente**: `Sesion`
+*   **Propósito**: Garantizar la existencia de una única instancia de sesión activa en todo el ciclo de vida de la aplicación.
+*   **Justificación**: Centraliza el control de acceso y el historial de acciones del usuario autenticado, evitando inconsistencias de estado.
+
+### 2.2. Facade (Estructural)
+*   **Componente**: `GestorClientes`
+*   **Propósito**: Proporcionar una interfaz unificada y simplificada para subsistemas complejos.
+*   **Justificación**: Desacopla la capa de presentación de la complejidad de gestión de memoria, validaciones y acceso a datos.
+
+### 2.3. Value Object (Estructural)
+*   **Componentes**: `SolicitudSeguimiento`, `ResultadoValidacion`
+*   **Propósito**: Encapsular un conjunto de valores inmutables que no requieren identidad propia.
+*   **Justificación**: Aumenta la seguridad del código al prevenir modificaciones laterales no deseadas en objetos de transferencia de datos.
+
+### 2.4. Static Utility
+*   **Componentes**: `Validador`, `Terminal`
+*   **Propósito**: Agrupar funciones de propósito general sin estado.
+
+## 3. Principios de Ingeniería
+
+### 3.1. SOLID
+*   **SRP (Single Responsibility)**: Cada clase posee una única razón de cambio (e.g., `GestorClientes` no maneja I/O de consola).
+*   **OCP (Open/Closed)**: Uso de enums (`TipoAccion`) y genéricos para permitir extensiones sin modificar código base.
+*   **DIP (Dependency Inversion)**: Utilización de interfaces abstractas para definir contratos en los TDAs.
+
+### 3.2. GRASP
+*   **Information Expert**: La lógica (como `seguir()` o `encolar()`) reside en la clase que posee los datos (`Cliente`).
+*   **Creator**: `GestorClientes` es responsable de instanciar nuevos objetos `Cliente` y `Accion`, ya que gestiona su ciclo de vida.
+*   **Low Coupling / High Cohesion**: Las capas minimizan sus dependencias y las clases internas maximizan su enfoque funcional.
+
+## 4. Características Técnicas Destacadas
+
+### 4.1. Persistencia y Carga
+Se optó por una estrategia híbrida "Memory-First" para cumplir con los requerimientos de persistencia sin sacrificar rendimiento:
+*   **Carga Bootstrap**: Lectura secuencial O(N) al inicio.
+*   **Operación In-Memory**: Todas las interacciones ocurren en RAM con estructuras de acceso O(1).
+*   **Dureza al Cierre**: Volcado completo de estado O(N) al finalizar sesión.
+
+### 4.2. Command Pattern (Historial)
+El sistema de deshacer/rehacer se implementa mediante dos pilas complementarias (`historial` y `pilaRehacer`), permitiendo transiciones de estado reversibles con complejidad constante O(1).
+
+## 5. Conclusión
+La arquitectura elegida equilibra la simplicidad técnica requerida para un entorno educativo con prácticas profesionales de desarrollo (patrones de diseño, separación de capas), resultando en un sistema robusto, testeable y eficiente.
