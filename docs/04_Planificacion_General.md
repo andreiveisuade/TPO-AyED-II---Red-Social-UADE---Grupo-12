@@ -170,3 +170,51 @@ Se priorizan pruebas de caja blanca para componentes críticos:
 | **Pure Fabrication** | `HistorialAcciones` es una fabricación pura para manejar undo/redo sin contaminar entidades |
 | **Indirection** | Los servicios actúan como intermediarios entre la vista y los TDAs |
 | **Protected Variations** | Cambiar implementación de ABB a AVL no afecta a los servicios que lo usan |
+
+---
+
+## 12. Preparación Técnica para Iteración 2
+
+### 12.1. Estructura de ABB Propuesta
+
+| Archivo | Descripción |
+|---------|-------------|
+| `src/tda/ABB.java` | Implementación del Árbol Binario de Búsqueda |
+| `src/interfaces/IABB.java` | Interfaz para el ABB |
+| `src/tda/NodoABB.java` | Nodo del árbol con clave, valor, izquierdo, derecho |
+
+### 12.2. Integración con GestorClientes
+
+El ABB será implementado como un **índice secundario por scoring**:
+
+1. **Alta de Cliente**: `diccionario.insertar()` + `abb.insertar(scoring, id)`
+2. **Baja de Cliente**: `diccionario.eliminar()` + `abb.eliminar(scoring, id)`
+3. **Modificación de Scoring**: `abb.eliminar(oldScoring, id)` + `abb.insertar(newScoring, id)`
+
+### 12.3. Operaciones Requeridas
+
+| Operación | Complejidad Esperada |
+|-----------|---------------------|
+| `insertar(clave, valor)` | O(log n) |
+| `buscar(clave)` | O(log n) |
+| `eliminar(clave)` | O(log n) |
+| `obtenerNivel(k)` | O(n) |
+| `recorridoInOrden()` | O(n) |
+
+### 12.4. Invariantes del ABB
+
+- Nodo izquierdo < Nodo padre < Nodo derecho
+- No hay claves duplicadas (o usar lista de valores por clave)
+- Altura balanceada no garantizada (ABB simple, no AVL)
+
+### 12.5. Puntos de Extensión Identificados
+
+```java
+// En GestorClientes.java agregar:
+private ABB<Integer, Integer> indiceScoring; // scoring -> clienteId
+
+// Modificar agregarCliente para actualizar ABB
+// Modificar eliminarCliente para limpiar ABB
+// Agregar buscarPorScoringOptimizado() usando ABB
+```
+
