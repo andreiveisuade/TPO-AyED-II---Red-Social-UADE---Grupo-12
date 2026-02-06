@@ -48,6 +48,17 @@ public class TDATest {
         testPersistenciaReal();
         testBuscarPorScoring();
         testPersistenciaUnfollow();
+        
+        // Tests Casos Borde y Complejos (Agregados para 10/10)
+        testConjuntoCasosBorde();
+        testDiccionarioEliminarInexistente();
+        testGestorClientesUndoAgregar();
+        testGestorClientesUndoEliminar();
+        testGestorClientesRelacionesInvalidas();
+        
+        // Tests Adicionales para 10/10 (Hash negativo y MAX_SEGUIDOS)
+        testDiccionarioHashNegativo();
+        testClienteMaxSeguidos();
 
         System.out.println("\n═══════════════════════════════════════════");
         System.out.printf("RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
@@ -472,6 +483,194 @@ public class TDATest {
             reportarExito("Persistencia - Unfollow");
         } catch (AssertionError e) {
             reportarFallo("Persistencia - Unfollow", e.getMessage());
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // NUEVOS TESTS (CASOS BORDE & COMPLEJOS)
+    // ═══════════════════════════════════════════════════════════════════
+
+    private static void testConjuntoCasosBorde() {
+        try {
+            Conjunto c = new Conjunto();
+            
+            // Eliminar de vacío
+            c.eliminar("Algo");
+            assert c.estaVacio() : "Eliminar de vacío no debe afectar";
+            
+            c.agregar("A");
+            c.eliminar("B"); // Eliminar inexistente
+            assert c.getCantidad() == 1 : "Eliminar inexistente no debe cambiar cantidad";
+            assert c.contiene("A") : "Elemento existente debe mantenerse";
+            
+            reportarExito("Conjunto - Casos Borde (Vacío/Inexistente)");
+        } catch (AssertionError e) {
+            reportarFallo("Conjunto - Casos Borde", e.getMessage());
+        }
+    }
+
+    private static void testDiccionarioEliminarInexistente() {
+        try {
+            Diccionario<String, Integer> d = new Diccionario<>();
+            d.insertar("A", 1);
+            
+            // Eliminar clave que no existe
+            Integer val = d.eliminar("Z");
+            assert val == null : "Eliminar clave inexistente debe retornar null";
+            assert d.getCantidad() == 1 : "Cantidad no debe cambiar";
+            assert d.contiene("A") : "Elemento existente debe persistir";
+            
+            reportarExito("Diccionario - Eliminar Inexistente");
+        } catch (AssertionError e) {
+            reportarFallo("Diccionario - Eliminar Inexistente", e.getMessage());
+        }
+    }
+
+    private static void testGestorClientesUndoAgregar() {
+        try {
+            initTestDB();
+            GestorClientes g = new GestorClientes(TEST_DB);
+            Sesion.getInstancia().iniciarSesion(new Cliente(999, "Admin", 100)); // Fake session
+            g.activarHistorial();
+
+            g.agregarCliente("UndoUser", 50);
+            assert g.buscarPorNombre("UndoUser").length > 0 : "Usuario debe existir";
+            
+            g.deshacer();
+            
+            assert g.buscarPorNombre("UndoUser").length == 0 : "Usuario debe haber sido eliminado tras Undo";
+            
+            reportarExito("Historial - Undo (Agregar Cliente)");
+        } catch (AssertionError e) {
+            reportarFallo("Historial - Undo (Agregar Cliente)", e.getMessage());
+        }
+    }
+
+    private static void testGestorClientesUndoEliminar() {
+        try {
+            initTestDB();
+            GestorClientes g = new GestorClientes(TEST_DB);
+            Sesion.getInstancia().iniciarSesion(new Cliente(999, "Admin", 100));
+            g.activarHistorial();
+
+            int id = g.agregarCliente("ToBeDeleted", 50);
+            
+            g.eliminarCliente(id);
+            assert !g.existeCliente(id) : "Cliente eliminado";
+            
+            g.deshacer();
+            
+            assert g.existeCliente(id) : "Cliente debe haber sido restaurado";
+            Cliente restaurado = g.buscarPorId(id);
+            assert restaurado.getNombre().equals("ToBeDeleted") : "Nombre restaurado correcto";
+            assert restaurado.getScoring() == 50 : "Scoring restaurado correcto";
+            
+            reportarExito("Historial - Undo (Eliminar Cliente)");
+        } catch (AssertionError e) {
+            reportarFallo("Historial - Undo (Eliminar Cliente)", e.getMessage());
+        }
+    }
+
+    private static void testGestorClientesRelacionesInvalidas() {
+        try {
+            initTestDB();
+            GestorClientes g = new GestorClientes(TEST_DB);
+            int idA = g.agregarCliente("A", 10);
+            int idB = g.agregarCliente("B", 10);
+            
+            // Seguir ID inexistente
+            boolean res1 = g.seguir(idA, 999999);
+            assert !res1 : "No se debe poder seguir a ID inexistente";
+            
+            // Dejar de seguir ID inexistente
+            boolean res2 = g.dejarDeSeguir(idA, 999999);
+            assert !res2 : "No se debe poder dejar de seguir a ID inexistente";
+            
+            // Dejar de seguir a alguien que NO se sigue
+            boolean res3 = g.dejarDeSeguir(idA, idB); // A no sigue a B aun
+            assert !res3 : "No se debe poder dejar de seguir si no hay relación";
+            
+            reportarExito("GestorClientes - Relaciones Inválidas");
+        } catch (AssertionError e) {
+            reportarFallo("GestorClientes - Relaciones Inválidas", e.getMessage());
+        }
+
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // TESTS ADICIONALES PARA 10/10
+    // ═══════════════════════════════════════════════════════════════════
+
+    private static void testDiccionarioHashNegativo() {
+        try {
+            Diccionario<String, Integer> d = new Diccionario<>();
+            
+            // Strings que pueden generar hashCode negativo
+            String[] clavesProblematicas = {
+                "Aa", "BB", // Estos tienen hashCode conocidos que pueden colisionar
+                new String(new char[]{(char)0, (char)0}), // hashCode = 0
+                "test-neg-1",
+                "some_key_that_might_be_negative"
+            };
+            
+            // Insertar todas sin excepción
+            for (int i = 0; i < clavesProblematicas.length; i++) {
+                d.insertar(clavesProblematicas[i], i);
+            }
+            
+            // Verificar que todas son accesibles
+            for (int i = 0; i < clavesProblematicas.length; i++) {
+                assert d.contiene(clavesProblematicas[i]) : "Clave " + i + " debe existir";
+                assert d.obtener(clavesProblematicas[i]) == i : "Valor debe coincidir";
+            }
+            
+            // Test con Integer como clave (Integer.MIN_VALUE tiene hashCode negativo)
+            Diccionario<Integer, String> d2 = new Diccionario<>();
+            d2.insertar(Integer.MIN_VALUE, "min");
+            d2.insertar(-1, "negativo");
+            d2.insertar(0, "cero");
+            d2.insertar(Integer.MAX_VALUE, "max");
+            
+            assert d2.contiene(Integer.MIN_VALUE) : "MIN_VALUE debe existir";
+            assert d2.obtener(Integer.MIN_VALUE).equals("min") : "Valor MIN_VALUE correcto";
+            assert d2.contiene(-1) : "-1 debe existir";
+            
+            reportarExito("Diccionario - Hash con valores negativos");
+        } catch (AssertionError e) {
+            reportarFallo("Diccionario - Hash con valores negativos", e.getMessage());
+        } catch (ArrayIndexOutOfBoundsException e) {
+            reportarFallo("Diccionario - Hash con valores negativos", "ArrayIndexOutOfBoundsException: " + e.getMessage());
+        }
+    }
+
+    private static void testClienteMaxSeguidos() {
+        try {
+            Cliente c = new Cliente(1, "TestUser", 50);
+            
+            // Seguir al máximo permitido (MAX_SEGUIDOS = 2)
+            assert c.seguir(2) : "Primer seguido debe funcionar";
+            assert c.seguir(3) : "Segundo seguido debe funcionar";
+            
+            // Intentar seguir un tercero debe fallar
+            boolean tercero = c.seguir(4);
+            assert !tercero : "Tercer seguido debe fallar (MAX_SEGUIDOS = 2)";
+            
+            // Verificar cantidad
+            assert c.getCantidadSiguiendo() == 2 : "Cantidad debe ser 2, no " + c.getCantidadSiguiendo();
+            
+            // Dejar de seguir uno y luego poder seguir otro
+            c.dejarDeSeguir(2);
+            assert c.getCantidadSiguiendo() == 1 : "Cantidad debe ser 1 tras dejar de seguir";
+            
+            assert c.seguir(5) : "Ahora debe poder seguir a un nuevo usuario";
+            assert c.getCantidadSiguiendo() == 2 : "Cantidad debe volver a ser 2";
+            
+            // Constante debe ser accesible
+            assert Cliente.MAX_SEGUIDOS == 2 : "Constante MAX_SEGUIDOS debe ser 2";
+            
+            reportarExito("Cliente - MAX_SEGUIDOS (límite de " + Cliente.MAX_SEGUIDOS + ")");
+        } catch (AssertionError e) {
+            reportarFallo("Cliente - MAX_SEGUIDOS", e.getMessage());
         }
     }
 
