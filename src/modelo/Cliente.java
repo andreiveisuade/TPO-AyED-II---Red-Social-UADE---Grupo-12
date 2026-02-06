@@ -19,7 +19,12 @@ INVARIANTE DE REPRESENTACIÓN:
 public class Cliente {
     
     /* Constantes */
-    // Ya no hay límite máximo de usuarios a seguir
+    /*
+     * Límite máximo de usuarios que un cliente puede seguir.
+     * Restricción impuesta por regla de negocio Iteración 1.
+     * En iteraciones futuras puede incrementarse o eliminarse.
+     */
+    public static final int MAX_SEGUIDOS = 2;
     
     /* Atributos */
     private int id;
@@ -107,13 +112,16 @@ public class Cliente {
 
     /*
     Intenta seguir a otro cliente por ID.
-    Retorna false si ya lo sigue o si es él mismo.
+    Retorna false si ya lo sigue, si es él mismo, o si alcanzó el límite MAX_SEGUIDOS.
     */
     public boolean seguir(int idObjetivo) {
         if (idObjetivo == this.id) {
             return false;
         }
         if (siguiendo.contiene(idObjetivo)) {
+            return false;
+        }
+        if (siguiendo.getCantidad() >= MAX_SEGUIDOS) {
             return false;
         }
         siguiendo.insertar(idObjetivo, true);
