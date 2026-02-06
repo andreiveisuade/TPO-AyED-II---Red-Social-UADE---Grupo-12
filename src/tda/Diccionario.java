@@ -48,7 +48,7 @@ public class Diccionario<K, V> implements IDiccionario<K, V> {
         if (clave == null) {
             throw new IllegalArgumentException("La clave no puede ser null");
         }
-        return Math.abs(clave.hashCode() % tabla.length);
+        return Math.abs(clave.hashCode()) % tabla.length;
     }
 
     /*
