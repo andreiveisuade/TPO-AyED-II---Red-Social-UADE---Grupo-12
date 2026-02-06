@@ -8,12 +8,14 @@ title **Diagrama de Clases Simplificado**\nRelaciones principales del sistema
 ' ==========================================
 ' MODELO - Sesion (Centro del sistema)
 ' ==========================================
-class Sesion {
+class Sesion <<Singleton>> {
+    - {static} instancia: Sesion
     - usuarioActual: Cliente
     - estaAutenticado: boolean
     - historial: HistorialAcciones
     - pilaRehacer: Pila<Accion>
     __
+    + {static} getInstancia(): Sesion
     + iniciarSesion(cliente: Cliente): void
     + cerrarSesion(): void
     + estaAutenticado(): boolean
@@ -28,11 +30,11 @@ class Sesion {
 ' MODELO - Cliente
 ' ==========================================
 class Cliente {
+    + {static} MAX_SEGUIDOS: int = 2
     - id: int
     - nombre: String
     - scoring: int
-    - siguiendo: int[2]
-    - cantidadSiguiendo: int
+    - siguiendo: Diccionario<Integer, Boolean>
     - solicitudesPendientes: Cola<SolicitudSeguimiento>
     __
     + seguir(idObjetivo: int): boolean
@@ -40,6 +42,7 @@ class Cliente {
     + recibirSolicitud(solicitud: SolicitudSeguimiento): void
     + procesarSiguienteSolicitud(): SolicitudSeguimiento
     + getCantidadSolicitudesPendientes(): int
+    - validarLimiteSeguidores(): boolean
 }
 
 ' ==========================================
@@ -55,12 +58,12 @@ class GestorClientes {
     + buscarPorScoring(scoring: int): Cliente[]
     + eliminarCliente(id: int): boolean
     __
-    <color:blue>Requieren Sesion:</color>
-    + seguir(idSol: int, idObj: int, sesion: Sesion): boolean
-    + dejarDeSeguir(idSol: int, idObj: int, sesion: Sesion): boolean
-    + deshacer(sesion: Sesion): Accion
-    + rehacer(sesion: Sesion): Accion
-    + getCantidadAcciones(sesion: Sesion): int
+    <color:blue>Uso de Singleton Sesion:</color>
+    + seguir(idSol: int, idObj: int): boolean
+    + dejarDeSeguir(idSol: int, idObj: int): boolean
+    + deshacer(): Accion
+    + rehacer(): Accion
+    + activarHistorial(): void
 }
 
 ' ==========================================
@@ -78,10 +81,10 @@ class HistorialAcciones {
 }
 
 ' ==========================================
-' PERSISTENCIA - JsonLoader
+' PERSISTENCIA
 ' ==========================================
 class JsonLoader {
-    + cargarClienteEspecifico(id: int, ruta: String, gestor: GestorClientes): boolean
+    + cargarClientes(ruta: String): Cliente[]
 }
 
 ' ==========================================
@@ -92,28 +95,26 @@ Sesion *-- "1" HistorialAcciones : historial
 Sesion *-- "1" "Pila<Accion>" : pilaRehacer
 
 Cliente *-- "1" "Cola<SolicitudSeguimiento>" : solicitudesPendientes
+Cliente *-- "1" "Diccionario" : siguiendo
 
 GestorClientes o-- "*" Cliente : gestiona
-GestorClientes ..> Sesion : "recibe como parámetro"
-
-JsonLoader ..> GestorClientes : carga en
+GestorClientes ..> Sesion : "accede via getInstancia()"
 
 ' ==========================================
 ' NOTAS
 ' ==========================================
 note bottom of GestorClientes
-    <b>Patrón modificado:</b>
-    Los métodos que modifican estado
-    (seguir, deshacer, etc.) ahora
-    reciben Sesion para registrar
-    en el historial correcto.
+    <b>Patrón Facade:</b>
+    Centraliza la lógica de negocio.
+    Usa Sesion.getInstancia() para
+    registrar acciones en el historial.
 end note
 
 note right of Sesion
-    <b>Responsabilidad ampliada:</b>
-    Sesion ahora es dueña del
-    historial y pila de rehacer.
-    Esto permite undo/redo por usuario.
+    <b>Singleton:</b>
+    Garantiza una única sesión
+    accesible globalmente.
+    Dueña del historial de deshacer.
 end note
 
 @enduml

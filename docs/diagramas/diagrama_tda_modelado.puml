@@ -33,6 +33,7 @@ package "modelo" #FFF3E0 {
     }
     
     class Cliente {
+        + {static} MAX_SEGUIDOS: int = 2
         - id: int
         - nombre: String
         - scoring: int
@@ -44,6 +45,7 @@ package "modelo" #FFF3E0 {
         + recibirSolicitud(SolicitudSeguimiento): void
         + procesarSiguienteSolicitud(): SolicitudSeguimiento
         + getCantidadSolicitudesPendientes(): int
+        - validarLimiteSeguidores(): boolean
         __
         <color:gray>Invariantes:</color>
         <color:gray>• id > 0</color>
