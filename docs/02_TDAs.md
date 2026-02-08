@@ -170,3 +170,31 @@ La selección de estructuras no es accidental, sino el resultado de un análisis
 3.  **Cola FIFO**: Necesaria por la lógica de equidad temporal (Solicitudes).
 
 Esta arquitectura de datos híbrida permite que el sistema sea **rápido (latencia baja)** y **funcionalmente robusto**, cumpliendo con los estándares académicos de un diseño eficiente.
+
+## 9. Análisis de Escalabilidad (Escenario 10M+ Usuarios)
+
+Ante la pregunta de cómo se comportaría el sistema si la base de usuarios creciera de 1.000.000 (1M) a 10.000.000 (10M), el análisis técnico es el siguiente:
+
+### 9.1. Comportamiento en la Implementación Actual
+Actualmente, el Diccionario tiene una capacidad fija de **M = 1,000,003** buckets.
+*   **Factor de Carga ($\alpha = N/M$)**: Con 10M de usuarios, $\alpha \approx 10$.
+*   **Impacto en Rendimiento/Colisiones**: En promedio, cada bucket contendría una lista enlazada de **10 nodos**.
+*   **Degradación del Tiempo de Acceso**: La búsqueda sigue siendo técnicamente $O(1)$ amortizado porque el factor de carga es constante respecto a N (si consideramos N=10M fijo), pero esa "constante" es 10 veces mayor que con 1M.
+    *   *Comparación*: Aún con esta degradación, realizar ~10 comparaciones lineales en la lista de un bucket es computacionalmente más barato que las ~24 comparaciones que requeriría un Árbol Binario Balanceado ($log_2(10,000,000) \approx 23.2$).
+
+### 9.2. ¿Es la estructura (Hash Table) la correcta para 10M o más?
+**SÍ**. La Tabla Hash sigue siendo la estructura de datos superior para este problema (búsquedas exactas por ID). 
+*   **Comparación**: Cambiar a un Árbol (AVL, Rojo-Negro) o B-Tree aumentaría la complejidad de acceso de $O(1)$ a $O(\log N)$ de forma permanente.
+*   **Conclusión**: El problema no es la estructura de datos, sino la estrategia de gestión de su capacidad.
+
+### 9.3. Evolución Necesaria: Rehashing Dinámico
+Para mantener el rendimiento óptimo ($\alpha \approx 1$) con un crecimiento indefinido de usuarios (10M, 50M, 100M...), la implementación profesional debería incorporar **Rehashing Automático**, similar a `java.util.HashMap`:
+
+1.  **Monitoreo**: Verificar el factor de carga ($\alpha$) tras cada inserción.
+2.  **Umbral de Carga**: Si $\alpha > 0.75$ (estándar industrial), disparar una operación de redimensionamiento.
+3.  **Expansión**: Crear una nueva tabla interna con el doble de capacidad (ej. de 1M a 2M, luego a 4M buckets).
+4.  **Reubicación**: Recalcular el hash de todas las claves existentes y moverlas a la nueva tabla.
+    *   *Costo*: Esta operación es costosa ($O(N)$), pero ocurre muy raramente (amortizado), manteniendo el costo promedio de inserción en $O(1)$.
+5.  **Optimización Adicional**: En buckets muy saturados (ej. > 8 elementos por mala función hash), transformar la lista enlazada en un pequeño árbol rojo-negro (estrategia Java 8+).
+
+**Veredicto Final**: Para escalar a 10M, la estructura correcta sigue siendo el Diccionario (Hash Table). La única modificación requerida sería implementar una estrategia dinámica de redimensionamiento (rehashing) para mantener el factor de carga bajo control.
