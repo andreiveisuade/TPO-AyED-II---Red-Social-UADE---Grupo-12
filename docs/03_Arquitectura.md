@@ -60,7 +60,10 @@ Se optó por una estrategia híbrida "Memory-First" para cumplir con los requeri
 *   **Dureza al Cierre**: Volcado completo de estado O(N) al finalizar sesión.
 
 ### 4.2. Command Pattern (Historial)
-El sistema de deshacer/rehacer se implementa mediante dos pilas complementarias (`historial` y `pilaRehacer`), permitiendo transiciones de estado reversibles con complejidad constante O(1).
+El sistema de deshacer se implementa mediante una pila (`historial`) de objetos `Accion`. Cada acción encapsula la información necesaria para revertir un cambio de estado.
+
+*   **Undo**: Se desapila la última acción y se ejecuta la lógica inversa para restaurar el estado anterior. Operación O(1).
+*   **Persistencia de Sesión**: El historial se mantiene en memoria durante la sesión del usuario.
 
 ## 5. Conclusión
 La arquitectura elegida equilibra la simplicidad técnica requerida para un entorno educativo con prácticas profesionales de desarrollo (patrones de diseño, separación de capas), resultando en un sistema robusto, testeable y eficiente.

@@ -28,7 +28,7 @@ SOLID: SRP - solo gestiona clientes
  */
 public class GestorClientes {
     
-    /* Atributos */
+    // Esta clase una un diccionario como TDA, donde la clave es el id del cliente, y el valor es el cliente
     private Diccionario<Integer, Cliente> clientes;
     private boolean registrarEnHistorial;
     private int proximoId;
@@ -136,6 +136,12 @@ public class GestorClientes {
         int id = proximoId++;
         Cliente cliente = new Cliente(id, nombre, scoring);
         clientes.insertar(id, cliente);
+        
+        if (registrarEnHistorial && sesionValida()) {
+            Accion accion = new Accion(TipoAccion.AGREGAR_CLIENTE, String.valueOf(id));
+            getSesion().getHistorial().registrar(accion);
+        }
+        
         return id;
     }
 
@@ -258,6 +264,24 @@ public class GestorClientes {
     public boolean eliminarCliente(int id) {
         Cliente cliente = clientes.obtener(id);
         if (cliente == null) return false;
+
+        // Guardar estado para historial antes de eliminar referencias
+        if (registrarEnHistorial && sesionValida()) {
+            StringBuilder seguidos = new StringBuilder();
+            int[] idsSeguidos = cliente.getSiguiendo();
+            for (int i = 0; i < idsSeguidos.length; i++) {
+                seguidos.append(idsSeguidos[i]);
+                if (i < idsSeguidos.length - 1) seguidos.append(",");
+            }
+            
+            Accion accion = new Accion(TipoAccion.ELIMINAR_CLIENTE, 
+                String.valueOf(id), 
+                cliente.getNombre(), 
+                String.valueOf(cliente.getScoring()),
+                seguidos.toString()
+            );
+            getSesion().getHistorial().registrar(accion);
+        }
 
         clientes.eliminar(id);
         

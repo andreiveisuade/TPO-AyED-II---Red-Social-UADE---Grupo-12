@@ -1,19 +1,19 @@
 # Especificación de Tipos de Datos Abstractos (TDAs)
 
-Este documento justifica técnica y teóricamente la elección de las estructuras de datos, detallando su implementación, complejidad asintótica y aplicación en el dominio del problema.
+Este documento justifica técnica y teóricamente la elección de las estructuras de datos, detallando su implementación en Java, complejidad asintótica y aplicación en el dominio del problema.
 
 ---
 
 ## 1. Resumen de Complejidad
 
-Se ha priorizado un límite superior asintótico de **O(1)** para las operaciones más frecuentes del sistema.
+Se ha priorizado un límite superior asintótico de **O(1)** para las operaciones más frecuentes del sistema. Todas las estructuras son **genéricas** para maximizar la reutilización.
 
-| Estructura | Implementación | Acceso | Inserción | Eliminación | Uso Principal |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Diccionario** | Hash Table (Addressable) | O(1)* | O(1)* | O(1)* | Indexación de usuarios y relaciones. |
-| **Pila** | Linked List (LIFO) | O(1) | O(1) | O(1) | Gestión del historial (Undo/Redo). |
-| **Cola** | Linked List (FIFO) | O(1) | O(1) | O(1) | Buffer de solicitudes de seguimiento. |
-| **Conjunto** | Hash Set Adapter | O(1)* | O(1)* | O(1)* | Verificación de unicidad. |
+| Estructura | Interfaz | Implementación | Acceso | Inserción | Eliminación | Uso Principal |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Diccionario** | `IDiccionario<K,V>` | Hash Table (Addressable) | O(1)* | O(1)* | O(1)* | Indexación de clientes y relaciones. |
+| **Pila** | `IPila<T>` | Linked List (LIFO) | O(1) | O(1) | O(1) | Gestión del historial (Undo). |
+| **Cola** | `ICola<T>` | Linked List (FIFO) | O(1) | O(1) | O(1) | Buffer de solicitudes de seguimiento. |
+| **Conjunto** | `IConjunto` | Hash Set Adapter | O(1)* | O(1)* | O(1)* | Colecciones de elementos únicos (Strings). |
 
 *\* Amortizado promedio.*
 
@@ -22,92 +22,114 @@ Se ha priorizado un límite superior asintótico de **O(1)** para las operacione
 ## 2. Diccionario (Hash Table)
 
 ### 2.1. Definición
-Estructura asociativa que almacena pares clave-valor, permitiendo la recuperación eficiente de valores a partir de su clave única.
+Estructura asociativa genérica `Diccionario<K, V>` que almacena pares clave-valor, permitiendo la recuperación eficiente de valores a partir de su clave única.
 
 ### 2.2. Implementación Técnica
 *   **Estrategia**: Open Hashing (Encadenamiento separado).
-*   **Función Hash**: Modular aritmética (`Math.abs(key.hashCode() % CAPACIDAD)`).
-*   **Capacidad**: 64 buckets (Fija, sin rehashing dinámico por diseño para simplificar la gestión de memoria en este prototipo).
+*   **Estructura Interna**: Arreglo de nodos (`NodoDiccionario<K, V>[] table`).
+*   **Función Hash**: Modular aritmética (`Math.abs(key.hashCode()) % capacidad`).
+*   **Capacidad**:
+    *   **Por defecto**: 64 buckets.
+    *   **Optimizada**: En `GestorClientes`, se inicializa con **1,000,003** buckets (número primo) para minimizar colisiones con el dataset de 1M de clientes.
 *   **Colisiones**: Resueltas mediante listas enlazadas simples en cada bucket.
+*   **Sin Rehashing**: La capacidad es fija tras la instanciación para garantizar previsibilidad en el consumo de memoria.
 
 ### 2.3. Análisis de Complejidad
-*   **Caso Promedio**: O(1), asumiendo una distribución uniforme de claves.
-*   **Peor Caso**: O(n), degenerando en una lista enlazada si todas las claves colisionan.
+*   **Caso Promedio**: O(1), gracias a la distribución uniforme de claves y la capacidad optimizada.
+*   **Peor Caso**: O(n), degenerando en una lista enlazada si todas las claves colisionan (mitigado por el tamaño de la tabla).
 
 ### 2.4. Aplicación en el Sistema
-*   **Gestión de Usuarios**: `GestorClientes` utiliza un Diccionario para mapear `ID (Integer)` -> `Cliente (Objeto)`.
-*   **Relaciones**: Cada `Cliente` mantiene un Diccionario de usuarios seguidos para verificar relaciones en tiempo constante.
+*   **Gestión de Clientes**: `GestorClientes` utiliza `Diccionario<Integer, Cliente>` para mapear IDs a instancias de objetos.
+*   **Relaciones**: Cada `Cliente` mantiene un `Diccionario<Integer, Boolean>` llamado `siguiendo` para verificar relaciones de seguimiento en tiempo constante O(1).
 
 ---
 
 ## 3. Pila (Stack)
 
 ### 3.1. Definición
-Colección lineal que sigue la política **LIFO** (Last In, First Out).
+Colección lineal genérica `Pila<T>` que sigue la política **LIFO** (Last In, First Out).
 
 ### 3.2. Implementación Técnica
-*   **Estructura**: Lista enlazada simple.
+*   **Estructura**: Lista enlazada simple de nodos (`NodoPila<T>`).
 *   **Punteros**: Referencia única al nodo `tope`.
+*   **Tipado**: Genérico, permite almacenar cualquier tipo de objeto.
 
 ### 3.3. Análisis de Complejidad
-Todas las operaciones primitivas (`push`, `pop`, `peek`) manipulan únicamente el puntero al tope, garantizando una complejidad temporal constante **O(1)** independiente del tamaño de la pila.
+Todas las operaciones primitivas (`apilar`, `desapilar`, `verTope`) manipulan únicamente la referencia al tope, garantizando una complejidad temporal constante **O(1)** independiente del tamaño de la pila.
 
 ### 3.4. Aplicación en el Sistema
-Se utiliza implementar el patrón **Command** para la funcionalidad de deshacer/rehacer:
-1.  **Historial**: Pila de acciones realizadas.
-2.  **Redo**: Pila de acciones revertidas.
+Se utiliza implementar el patrón **Command** para la funcionalidad de deshacer:
+*   **Sesion**: Mantiene una instancia de `HistorialAcciones` que encapsula una `Pila<Accion>`.
+*   **Undo**: Las acciones realizadas (`Accion`) se apilan y, al deshacer, se desapilan para revertir el estado.
 
 ---
 
 ## 4. Cola (Queue)
 
 ### 4.1. Definición
-Colección lineal que sigue la política **FIFO** (First In, First Out).
+Colección lineal genérica `Cola<T>` que sigue la política **FIFO** (First In, First Out).
 
 ### 4.2. Implementación Técnica
-*   **Estructura**: Lista enlazada simple.
-*   **Punteros**: Referencias explícitas a `frente` (inicio) y `fin` (final) para permitir inserciones y eliminaciones en extremos opuestos sin recorrer la estructura.
+*   **Estructura**: Lista enlazada simple de nodos (`NodoCola<T>`).
+*   **Punteros**: Referencias explícitas a `frente` (inicio) y `fin` (final) para permitir inserciones al final y eliminaciones al frente sin recorrer la estructura.
 
 ### 4.3. Análisis de Complejidad
 *   **Encolar**: Inserción al final usando el puntero `fin` → **O(1)**.
 *   **Desencolar**: Eliminación del frente usando el puntero `frente` → **O(1)**.
 
 ### 4.4. Aplicación en el Sistema
-Gestiona las solicitudes de seguimiento asincrónicas. Garantiza la equidad en el procesamiento: la primera solicitud recibida es la primera en ser presentada al usuario.
+*   **Solicitudes Pendientes**: Cada `Cliente` tiene una `Cola<SolicitudSeguimiento>` para gestionar las peticiones recibidas. Garantiza que las solicitudes se procesen en el orden estricto de llegada.
 
 ---
 
-## 5. Abstracción y Polimorfismo
+## 5. Conjunto (Set)
 
-El sistema adhiere al **Principio de Inversión de Dependencias (DIP)** mediante la definición de interfaces estrictas para cada TDA:
+### 5.1. Definición
+Colección de elementos únicos sin orden específico.
+
+### 5.2. Implementación Técnica
+*   **Patrón Adapter**: La clase `Conjunto` utiliza internamente un `Diccionario<String, Boolean>`.
+*   **Unicidad**: Garantizada por la propiedad de claves únicas del Diccionario subyacente.
+*   **Valor Dummy**: Se almacena `true` como valor para todas las claves.
+
+---
+
+## 6. Abstracción y Polimorfismo
+
+El sistema adhiere al **Principio de Inversión de Dependencias (DIP)** mediante la definición de interfaces para cada estructura en el paquete `interfaces`:
 
 *   `IDiccionario<K,V>`
 *   `IPila<T>`
 *   `ICola<T>`
+*   `IConjunto`
 
-Esto desacopla la implementación concreta (listas enlazadas, arreglos, etc.) de los clientes que consumen estas estructuras (Gestores, Modelos), permitiendo la sustitución de implementaciones sin impacto en la lógica de negocio.
+Esto desacopla la implementación concreta (listas enlazadas, arreglos, buckets) de la lógica de negocio (Gestores, Modelos), facilitando el mantenimiento y las pruebas.
 
 ---
 
-## 6. Diagrama de Estructuras
+## 7. Diagrama de Estructuras
 
-A continuación se esquematiza la jerarquía y composición de los TDAs en el modelo de objetos:
+A continuación se esquematiza la jerarquía y composición de los TDAs en el modelo de objetos actual:
 
 ```mermaid
 classDiagram
     class GestorClientes
     class Cliente
-    class Diccionario
-    class Cola
-    class Pila
     class Sesion
+    class HistorialAcciones
+    
+    class "Diccionario<Integer, Cliente>" as DicClientes
+    class "Diccionario<Integer, Boolean>" as DicSeguidos
+    class "Cola<SolicitudSeguimiento>" as ColaSolicitudes
+    class "Pila<Accion>" as PilaHistorial
 
-    GestorClientes --> Diccionario : usa (Clientes)
-    Cliente --> Diccionario : usa (Seguidos)
-    Cliente --> Cola : usa (Solicitudes)
-    Sesion --> Pila : usa (Historial)
+    GestorClientes --> DicClientes : usa (clientes)
+    Cliente --> DicSeguidos : usa (siguiendo)
+    Cliente --> ColaSolicitudes : usa (solicitudesPendientes)
+    Sesion --> HistorialAcciones : posee
+    HistorialAcciones --> PilaHistorial : usa (pilaAcciones)
 ```
 
-## 7. Conclusión
+## 8. Conclusión
 
-La selección de estas estructuras de datos específicas permite cumplir con los requisitos no funcionales de rendimiento, proporcionando tiempos de respuesta inmediatos incluso bajo carga simulada de 1.000.000 de registros.
+La selección de estas estructuras de datos y su implementación manual en Java (sin usar Collections Framework) permite un control total sobre la gestión de memoria y la complejidad algorítmica. La optimización de capacidad en el Diccionario principal es clave para procesar 1.000.000 de registros con tiempos de respuesta inmediatos.

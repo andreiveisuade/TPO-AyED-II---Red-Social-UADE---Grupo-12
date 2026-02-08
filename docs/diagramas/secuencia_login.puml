@@ -1,15 +1,13 @@
-@startuml Secuencia: Login con Lazy Loading
+@startuml Secuencia: Login In-Memory
 !theme plain
 skinparam backgroundColor #FEFEFE
 skinparam sequenceMessageAlign center
 
-title **Diagrama de Secuencia: Login con Lazy Loading**\nCarga de usuario bajo demanda desde archivo JSON
+title **Diagrama de Secuencia: Login (In-Memory)**\nAutenticación en Sistema Cargado
 
 actor Usuario as user
 participant "Menu" as menu
 participant "GestorClientes" as gestor
-participant "JsonLoader" as loader
-database "clientes_1M.json" as json
 participant "Sesion" as sesion
 participant "Cliente" as cliente
 
@@ -18,34 +16,13 @@ user -> menu : ingresar ID (ej: 100000)
 
 menu -> gestor : buscarPorId(100000)
 gestor -> gestor : clientes.obtener(100000)
-gestor --> menu : null (no está en memoria)
-
-== Lazy Loading ==
-menu -> loader : cargarClienteEspecifico(100000, "data/clientes_1M.json", gestor)
-
-loader -> json : leer archivo (streaming)
-note right of loader
-    Lee línea por línea
-    hasta encontrar id: 100000
-end note
-
-loader -> loader : parsear datos\n(id, nombre, scoring, siguiendo)
-
-loader -> gestor : agregarClienteConId(100000, "Federico", 85)
-gestor -> cliente ** : new Cliente(100000, "Federico", 85)
-gestor -> gestor : clientes.insertar(100000, cliente)
-
-loader --> menu : true (cargado exitosamente)
-
-== Iniciar Sesión ==
-menu -> gestor : buscarPorId(100000)
 gestor --> menu : Cliente (Federico)
 
+== Iniciar Sesión ==
 menu -> sesion : iniciarSesion(cliente)
 sesion -> sesion : usuarioActual = cliente
 sesion -> sesion : estaAutenticado = true
 sesion -> sesion : historial = new HistorialAcciones()
-sesion -> sesion : pilaRehacer = new Pila<>()
 
 menu --> user : "✓ ¡Hola, Federico!"
 

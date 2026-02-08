@@ -18,14 +18,12 @@ package "modelo" #FFF3E0 {
         - usuarioActual: Cliente
         - estaAutenticado: boolean
         - historial: HistorialAcciones
-        - pilaRehacer: Pila<Accion>
         __
         - Sesion()
         + {static} getInstancia(): Sesion
         + iniciarSesion(Cliente): void
         + cerrarSesion(): void
         + getHistorial(): HistorialAcciones
-        + getPilaRehacer(): Pila<Accion>
         __
         <color:gray>Patrón Singleton: única instancia</color>
         <color:gray>• Constructor privado</color>
@@ -202,7 +200,6 @@ package "servicio" #E8F5E9 {
         + seguir(int, int): boolean
         + dejarDeSeguir(int, int): boolean
         + deshacer(): Accion
-        + rehacer(): Accion
         ==
         <color:gray>Usa Sesion.getInstancia()</color>
     }
@@ -231,7 +228,6 @@ GestorClientes ..> "0..*" Accion : "crea"
 
 ' Sesion (Singleton)
 Sesion "1" *-- "1" HistorialAcciones : "historial"
-Sesion "1" *-- "1" Pila : "pilaRehacer\n<Accion>"
 Sesion "1" o-- "0..1" Cliente : "usuarioActual"
 
 ' HistorialAcciones
@@ -265,7 +261,7 @@ note as N1
 • Clave: Integer (ID), Valor: Cliente
 
 <b>Pila (LIFO)</b>
-• 2 usos: Historial (undo) y pilaRehacer (redo)
+• 1 uso: Historial (undo)
 • Última acción = primera en deshacerse
 
 <b>Cola (FIFO)</b>
@@ -273,20 +269,9 @@ note as N1
 • Primera solicitud = primera atendida
 end note
 
-note as N2
-<b>Patrón Singleton en Sesion</b>
-
-Constructor privado + getInstancia()
-garantizan una única sesión activa.
-
-<b>Ventaja:</b> GestorClientes no necesita
-recibir Sesion como parámetro.
-API más limpia y simple.
-end note
-
 legend bottom
 |= TDA |= Política |= Uso Principal |= Ubicación |
-| Pila | LIFO | Historial + Rehacer | Sesion (Singleton) |
+| Pila | LIFO | Historial | Sesion (Singleton) |
 | Cola | FIFO | Solicitudes pendientes | Cliente |
 | Diccionario | Hash | Clientes por ID | GestorClientes |
 

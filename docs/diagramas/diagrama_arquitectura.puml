@@ -83,7 +83,6 @@ gestor --> accion : crea para registrar
 ' Modelo interno
 sesion --> cliente : "usuarioActual"
 sesion --> historialAcciones : "historial de sesión"
-sesion --> pila : "pilaRehacer"
 cliente --> solicitud : "cola interna"
 cliente --> cola : "solicitudesPendientes"
 accion --> tipoAccion : tipo

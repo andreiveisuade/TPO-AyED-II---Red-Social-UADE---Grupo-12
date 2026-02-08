@@ -13,7 +13,6 @@ class Sesion <<Singleton>> {
     - usuarioActual: Cliente
     - estaAutenticado: boolean
     - historial: HistorialAcciones
-    - pilaRehacer: Pila<Accion>
     __
     + {static} getInstancia(): Sesion
     + iniciarSesion(cliente: Cliente): void
@@ -21,7 +20,6 @@ class Sesion <<Singleton>> {
     + estaAutenticado(): boolean
     + getUsuarioActual(): Cliente
     + getHistorial(): HistorialAcciones
-    + getPilaRehacer(): Pila<Accion>
     + tieneSolicitudesPendientes(): boolean
     + getCantidadSolicitudesPendientes(): int
 }
@@ -62,7 +60,6 @@ class GestorClientes {
     + seguir(idSol: int, idObj: int): boolean
     + dejarDeSeguir(idSol: int, idObj: int): boolean
     + deshacer(): Accion
-    + rehacer(): Accion
     + activarHistorial(): void
 }
 
@@ -92,7 +89,7 @@ class JsonLoader {
 ' ==========================================
 Sesion *-- "1" Cliente : usuarioActual
 Sesion *-- "1" HistorialAcciones : historial
-Sesion *-- "1" "Pila<Accion>" : pilaRehacer
+
 
 Cliente *-- "1" "Cola<SolicitudSeguimiento>" : solicitudesPendientes
 Cliente *-- "1" "Diccionario" : siguiendo

@@ -1,4 +1,4 @@
-@startuml Secuencia: Enviar Solicitud de Seguimiento
+@startuml Secuencia: Enviar Solicitud
 !theme plain
 skinparam backgroundColor #FEFEFE
 skinparam sequenceMessageAlign center
@@ -9,8 +9,6 @@ actor "Usuario A\n(sesión activa)" as userA
 participant "MenuSolicitudes" as menuSol
 participant "Sesion" as sesion
 participant "GestorClientes" as gestor
-participant "JsonLoader" as loader
-database "clientes_1M.json" as json
 participant "Cliente B\n(objetivo)" as clienteB
 participant "SolicitudSeguimiento" as solicitud
 participant "Cola<Solicitud>" as cola
@@ -20,15 +18,7 @@ userA -> menuSol : Explorar > Buscar por ID
 menuSol -> userA : "ID de usuario: "
 userA -> menuSol : ingresar ID 500 (Usuario B)
 
-== Buscar Usuario B (puede requerir Lazy Loading) ==
-menuSol -> gestor : buscarPorId(500)
-gestor --> menuSol : null (no en memoria)
-
-menuSol -> loader : cargarClienteEspecifico(500, ruta, gestor)
-loader -> json : leer hasta id: 500
-loader -> gestor : agregarClienteConId(500, "María", 92)
-loader --> menuSol : true
-
+== Buscar Usuario B ==
 menuSol -> gestor : buscarPorId(500)
 gestor --> menuSol : Cliente B (María)
 

@@ -13,7 +13,6 @@ participant "Cola<Solicitud>" as cola
 participant "GestorClientes" as gestor
 participant "Cliente A\n(Federico)" as clienteA
 participant "HistorialAcciones" as historial
-participant "Pila<Accion>" as pilaRehacer
 participant "Accion" as accion
 
 == Usuario B ve sus solicitudes pendientes ==
@@ -52,14 +51,6 @@ sesion --> gestor : HistorialAcciones
 gestor -> historial : registrar(accion)
 historial -> historial : pila.apilar(accion)
 
-gestor -> sesion : getPilaRehacer()
-sesion --> gestor : Pila<Accion>
-gestor -> pilaRehacer : vaciar()
-note right of pilaRehacer
-    Al hacer nueva acción,
-    se borra la pila de rehacer
-end note
-
 gestor --> menuSol : true
 menuSol --> userB : "✓ Aceptaste a @Federico"
 
@@ -84,10 +75,6 @@ end note
 
 gestor -> clienteA : dejarDeSeguir(500)
 clienteA --> gestor : true
-
-gestor -> sesion : getPilaRehacer()
-sestor --> gestor : Pila<Accion>
-gestor -> pilaRehacer : apilar(accion)
 
 gestor --> menuSol : Accion (la que se deshizo)
 menuSol --> userB : "✓ Deshecho: SEGUIR 100000 → 500"
