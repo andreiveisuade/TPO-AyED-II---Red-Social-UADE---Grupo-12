@@ -33,19 +33,25 @@ La clase `Diccionario<K, V>` implementa una tabla hash genérica manual (sin usa
 *   **Función Hash**: `h(k) = Math.abs(k.hashCode()) % M`, donde `M` es la capacidad.
 *   **Manejo de Colisiones**: Inserción al inicio de la lista enlazada del bucket correspondiente.
 
-### 2.3. Aplicación y Optimización Específica (Binding)
+### 2.3. Comportamiento con Claves Enteras (Direct Addressing)
+Dado que los IDs de los clientes son enteros secuenciales y únicos (1...1.000.000), y que la implementación de `hashCode()` para la clase `Integer` en Java retorna el propio valor del entero, se produce un fenómeno de **direccionamiento cuasi-directo**:
+*   **Cálculo**: `h(id) = id % 1.000.003`.
+*   **Resultado**: Para todo $id \leq 1.000.002$, el índice del bucket es exactamente igual al `id`.
+*   **Implicación**: En la práctica, el Diccionario actúa como un **Arreglo de Acceso Directo**, eliminando colisiones y garantizando un acceso $O(1)$ determinista, mientras mantiene la flexibilidad genérica para soportar otras claves (ej. Strings en Conjunto).
+
+### 2.4. Aplicación y Optimización Específica (Binding)
 El sistema instancia esta estructura de dos formas críticas:
 
 #### A. Repositorio de Clientes (`GestorClientes`)
 *   **Instancia**: `Diccionario<Integer, Cliente> clientes`.
 *   **Optimización de Memoria/Tiempo**: Se inicializa con una capacidad de **M = 1,000,003** (número primo).
-    *   **Justificación**: Al tener M > N (1.000.003 > 1.000.000), el factor de carga α ≈ 1. Esto minimiza drásticamente las colisiones, acercando el rendimiento al mejor caso teórico de O(1) absoluto.
-    *   **Impacto**: Buscar un usuario por ID es instantáneo, crucial para el login y la navegación.
+    *   **Justificación**: Al tener M > N (1.000.003 > 1.000.000), el factor de carga α ≈ 1. Esto minimiza drásticamente las colisiones.
+    *   **Impacto**: Buscar un usuario por ID es instantáneo.
 
 #### B. Grafo de Relaciones (`Cliente`)
 *   **Instancia**: `Diccionario<Integer, Boolean> siguiendo`.
 *   **Uso**: Representa las aristas salientes del grafo social.
-*   **Ventaja**: Permite verificar si "Usuario A sigue a Usuario B" (`sigueA(id)`) en **O(1)**. Una implementación con listas simples requeriría O(N), lo cual sería inviable.
+*   **Ventaja**: Permite verificar si "Usuario A sigue a Usuario B" (`sigueA(id)`) en **O(1)**.
 
 ---
 
@@ -62,10 +68,9 @@ La clase `Pila<T>` utiliza una lista enlazada simple, manteniendo únicamente un
 *   **Contexto**: Funcionalidad de "Deshacer" (Undo).
 *   **Instancia**: `Pila<Accion> historial` dentro de `HistorialAcciones` (en `Sesion`).
 *   **Mecánica**:
-    1.  Cada operación reversible (Seguir, Dejar de Seguir) crea un objeto `Accion` (Command) que encapsula los datos necesarios para revertirla.
+    1.  Cada operación reversible crea un objeto `Accion` (Command).
     2.  Esta acción se apila (`push`) en el historial.
     3.  Al solicitar "Deshacer", se desapila (`pop`) la última acción y se ejecuta su lógica inversa.
-*   **Justificación**: La naturaleza LIFO de la Pila garantiza que las acciones se reversen en el orden cronológico inverso exacto, preservando la consistencia del estado.
 
 ---
 
@@ -78,16 +83,11 @@ La **Cola** es una estructura FIFO (First In, First Out) esencial para gestionar
 La clase `Cola<T>` emplea una lista enlazada con doble puntero:
 *   `frente`: Para eliminaciones (desencolar) en O(1).
 *   `fin`: Para inserciones (encolar) en O(1).
-*   **Nota**: Implementar esto con un solo puntero o con un arreglo dinámico (sin implementacion circular) implicaría operaciones O(N) indeseables.
 
 ### 4.3. Aplicación en el Sistema: Gestión de Solicitudes
 *   **Contexto**: Recepción de solicitudes de seguimiento.
 *   **Instancia**: `Cola<SolicitudSeguimiento> solicitudesPendientes` dentro de cada `Cliente`.
-*   **Flujo**:
-    1.  Usuario A envía solicitud a B -> `colaB.encolar(solicitud)`.
-    2.  Usuario B revisa sus pendientes -> `colaB.verFrente()`.
-    3.  Usuario B acepta/rechaza -> `colaB.desencolar()`.
-*   **Valor Académico**: Garantiza la **equidad** en el procesamiento. La primera persona que solicitó seguirte es la primera que verás.
+*   **Valor Académico**: Garantiza la **equidad** en el procesamiento.
 
 ---
 
@@ -99,7 +99,6 @@ El **Conjunto** modela la abstracción matemática de una colección de elemento
 ### 5.2. Implementación en Java (Adapter Pattern)
 La clase `Conjunto` se implementa como un **Adapter** sobre el `Diccionario`.
 *   **Mecanismo**: Almacena el elemento como *clave* y un valor dummy (`true`) como *valor*.
-*   **Reuso**: Aprovecha toda la lógica de resolución de colisiones y hashing del Diccionario, evitando duplicación de código compleja.
 
 ---
 
@@ -113,10 +112,8 @@ Las clases de alto nivel (`GestorClientes`, `Sesion`) no dependen de implementac
 *   `IPila<T>`
 *   `ICola<T>`
 
-Esto permite, por ejemplo, cambiar la implementación de `Pila` de una lista enlazada a un arreglo dinámico sin modificar una sola línea de `HistorialAcciones`.
-
 ### 6.2. Genéricos (Generics)
-El uso de `<T>`, `<K, V>` permite un **Polimorfismo Paramétrico**. Una única clase `Diccionario` sirve tanto para indexar Clientes por ID (`<Integer, Cliente>`) como para verificar seguidos (`<Integer, Boolean>`), garantizando **Type Safety** en tiempo de compilación y eliminando castigos excesivos.
+El uso de `<T>`, `<K, V>` permite un **Polimorfismo Paramétrico**. Una única clase `Diccionario` sirve tanto para indexar Clientes por ID (`<Integer, Cliente>`) como para verificar seguidos (`<Integer, Boolean>`), garantizando **Type Safety**.
 
 ---
 
@@ -169,8 +166,6 @@ La selección de estructuras no es accidental, sino el resultado de un análisis
 2.  **Pila LIFO**: Necesaria por la lógica de reversión temporal (Undo).
 3.  **Cola FIFO**: Necesaria por la lógica de equidad temporal (Solicitudes).
 
-Esta arquitectura de datos híbrida permite que el sistema sea **rápido (latencia baja)** y **funcionalmente robusto**, cumpliendo con los estándares académicos de un diseño eficiente.
-
 ## 9. Análisis de Escalabilidad (Escenario 10M+ Usuarios)
 
 Ante la pregunta de cómo se comportaría el sistema si la base de usuarios creciera de 1.000.000 (1M) a 10.000.000 (10M), el análisis técnico es el siguiente:
@@ -180,21 +175,15 @@ Actualmente, el Diccionario tiene una capacidad fija de **M = 1,000,003** bucket
 *   **Factor de Carga ($\alpha = N/M$)**: Con 10M de usuarios, $\alpha \approx 10$.
 *   **Impacto en Rendimiento/Colisiones**: En promedio, cada bucket contendría una lista enlazada de **10 nodos**.
 *   **Degradación del Tiempo de Acceso**: La búsqueda sigue siendo técnicamente $O(1)$ amortizado porque el factor de carga es constante respecto a N (si consideramos N=10M fijo), pero esa "constante" es 10 veces mayor que con 1M.
-    *   *Comparación*: Aún con esta degradación, realizar ~10 comparaciones lineales en la lista de un bucket es computacionalmente más barato que las ~24 comparaciones que requeriría un Árbol Binario Balanceado ($log_2(10,000,000) \approx 23.2$).
 
 ### 9.2. ¿Es la estructura (Hash Table) la correcta para 10M o más?
-**SÍ**. La Tabla Hash sigue siendo la estructura de datos superior para este problema (búsquedas exactas por ID). 
+**SÍ**. La Tabla Hash sigue siendo la estructura de datos superior para este problema.
 *   **Comparación**: Cambiar a un Árbol (AVL, Rojo-Negro) o B-Tree aumentaría la complejidad de acceso de $O(1)$ a $O(\log N)$ de forma permanente.
-*   **Conclusión**: El problema no es la estructura de datos, sino la estrategia de gestión de su capacidad.
 
 ### 9.3. Evolución Necesaria: Rehashing Dinámico
-Para mantener el rendimiento óptimo ($\alpha \approx 1$) con un crecimiento indefinido de usuarios (10M, 50M, 100M...), la implementación profesional debería incorporar **Rehashing Automático**, similar a `java.util.HashMap`:
+Para escalar indefinidamente manteniendo $\alpha \approx 1$, se requeriría implementar **Rehashing Dinámico**:
+1.  **Monitoreo**: Verificar $\alpha$ tras cada inserción.
+2.  **Expansión**: Duplicar la capacidad de la tabla cuando $\alpha > 0.75$.
+3.  **Reubicación**: Recalcular hashes y mover elementos ($O(N)$ amortizado).
 
-1.  **Monitoreo**: Verificar el factor de carga ($\alpha$) tras cada inserción.
-2.  **Umbral de Carga**: Si $\alpha > 0.75$ (estándar industrial), disparar una operación de redimensionamiento.
-3.  **Expansión**: Crear una nueva tabla interna con el doble de capacidad (ej. de 1M a 2M, luego a 4M buckets).
-4.  **Reubicación**: Recalcular el hash de todas las claves existentes y moverlas a la nueva tabla.
-    *   *Costo*: Esta operación es costosa ($O(N)$), pero ocurre muy raramente (amortizado), manteniendo el costo promedio de inserción en $O(1)$.
-5.  **Optimización Adicional**: En buckets muy saturados (ej. > 8 elementos por mala función hash), transformar la lista enlazada en un pequeño árbol rojo-negro (estrategia Java 8+).
-
-**Veredicto Final**: Para escalar a 10M, la estructura correcta sigue siendo el Diccionario (Hash Table). La única modificación requerida sería implementar una estrategia dinámica de redimensionamiento (rehashing) para mantener el factor de carga bajo control.
+**Veredicto Final**: Para escalar a 10M, la estructura correcta sigue siendo el Diccionario (Hash Table). La única modificación requerida sería implementar una estrategia dinámica de redimensionamiento.
