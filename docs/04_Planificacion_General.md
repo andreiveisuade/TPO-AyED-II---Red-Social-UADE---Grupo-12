@@ -16,7 +16,8 @@ El proyecto se despliega en iteraciones incrementales para garantizar la entrega
 
 ### 1.2. Iteración 2: Relaciones y Búsqueda (Futura)
 *   Implementación de relaciones dirigidas ("Seguir").
-*   Indexación secundaria por métrica de influencia (Scoring) mediante ABB.
+*   Búsqueda por scoring mediante recorrido del diccionario.
+*   Implementación de ABB para modelar relaciones de seguimiento y consultas por nivel.
 *   Consultas estructurales (e.g., usuarios en nivel K del árbol).
 
 ### 1.3. Iteración 3: Análisis de Red (Futura)
@@ -109,7 +110,7 @@ Se priorizan pruebas de caja blanca para componentes críticos:
 | Seguir a sí mismo | Alice → Alice | Error |
 | Nivel 4 vacío | árbol pequeño | [] |
 | Nivel 4 | árbol completo | nodos nivel 4 |
-| ABB vacío | buscar scoring | null/[] |
+| ABB vacío | buscar en árbol | null/[] |
 
 ### Iteración 3
 
@@ -133,9 +134,9 @@ Se priorizan pruebas de caja blanca para componentes críticos:
 
 | Operación | Tiempo | Espacio |
 |-----------|--------|---------|
-| Insertar cliente | O(1) + O(log n) | O(1) |
-| Buscar por nombre | O(1) | O(1) |
-| Buscar por scoring | O(log n) + O(k) | O(1) |
+| Insertar cliente | O(1) | O(1) |
+| Buscar por nombre | O(N) | O(N) |
+| Buscar por scoring | O(N) | O(N) |
 | Eliminar cliente (cascada) | O(n + E) | O(k) |
 | Undo/Redo | O(costo operación) | O(1) |
 | Agregar solicitud | O(1) | O(1) |
@@ -175,46 +176,32 @@ Se priorizan pruebas de caja blanca para componentes críticos:
 
 ## 12. Preparación Técnica para Iteración 2
 
-### 12.1. Estructura de ABB Propuesta
+### 12.1. Estructura de ABB (ya implementada)
 
 | Archivo | Descripción |
 |---------|-------------|
 | `src/tda/ABB.java` | Implementación del Árbol Binario de Búsqueda |
-| `src/interfaces/IABB.java` | Interfaz para el ABB |
 | `src/tda/NodoABB.java` | Nodo del árbol con clave, valor, izquierdo, derecho |
 
-### 12.2. Integración con GestorClientes
+### 12.2. Uso del ABB según consigna
 
-El ABB será implementado como un **índice secundario por scoring**:
+Según la consigna de Iteración 2, el ABB se utilizará para **modelar las relaciones de seguimiento** entre clientes, permitiendo imprimir los clientes en el cuarto nivel del árbol para determinar quién tiene más seguidores.
 
-1. **Alta de Cliente**: `diccionario.insertar()` + `abb.insertar(scoring, id)`
-2. **Baja de Cliente**: `diccionario.eliminar()` + `abb.eliminar(scoring, id)`
-3. **Modificación de Scoring**: `abb.eliminar(oldScoring, id)` + `abb.insertar(newScoring, id)`
+> **Nota sobre scoring**: Inicialmente se implementó el ABB como índice secundario por scoring, pero fue descartado porque con 1M de clientes y solo 101 valores posibles de scoring (0-100), el árbol degeneraba a una lista enlazada (~10.000 nodos por valor), causando stack overflow en la inserción recursiva. La búsqueda por scoring se resuelve con un recorrido lineal O(N) del diccionario, que es eficiente en la práctica (~1s para 1M registros).
 
-### 12.3. Operaciones Requeridas
+### 12.3. Operaciones del ABB
 
 | Operación | Complejidad Esperada |
 |-----------|---------------------|
-| `insertar(clave, valor)` | O(log n) |
-| `buscar(clave)` | O(log n) |
-| `eliminar(clave)` | O(log n) |
-| `obtenerNivel(k)` | O(n) |
-| `recorridoInOrden()` | O(n) |
+| `insertar(clave, valor)` | O(log n) promedio |
+| `buscar(clave)` | O(log n) promedio |
+| `eliminar(clave, valor)` | O(log n) promedio |
+| `buscarRango(min, max)` | O(log n + k) |
+| `inOrder()` | O(n) |
 
 ### 12.4. Invariantes del ABB
 
-- Nodo izquierdo < Nodo padre < Nodo derecho
-- No hay claves duplicadas (o usar lista de valores por clave)
+- Nodo izquierdo < Nodo padre
+- Nodo derecho >= Nodo padre (permite duplicados)
 - Altura balanceada no garantizada (ABB simple, no AVL)
-
-### 12.5. Puntos de Extensión Identificados
-
-```java
-// En GestorClientes.java agregar:
-private ABB<Integer, Integer> indiceScoring; // scoring -> clienteId
-
-// Modificar agregarCliente para actualizar ABB
-// Modificar eliminarCliente para limpiar ABB
-// Agregar buscarPorScoringOptimizado() usando ABB
-```
 

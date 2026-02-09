@@ -60,15 +60,17 @@ public class GestorClientes {
         System.out.println("Cargando clientes...");
         try (FileReader reader = new FileReader(archivoPath)) {
             Gson gson = new Gson();
-            // Estructura auxiliar para leer el formato actual
             ClientesWrapper wrapper = gson.fromJson(reader, ClientesWrapper.class);
             
-            this.clientes = new Diccionario<>(1000003); // Capacidad optimizada
+            this.clientes = new Diccionario<>(1000003);
             
             if (wrapper != null && wrapper.clientes != null) {
-                for (Cliente c : wrapper.clientes) {
+                for (ClienteDTO dto : wrapper.clientes) {
+                    Cliente c = new Cliente(dto.id, dto.nombre, dto.scoring);
+                    c.cargarSiguiendo(dto.siguiendo);
+                    c.cargarSolicitudes(dto.solicitudes);
+                    
                     clientes.insertar(c.getId(), c);
-                    // Actualizar proximoId
                     if(c.getId() >= proximoId) proximoId = c.getId() + 1;
                 }
             }
@@ -87,11 +89,18 @@ public class GestorClientes {
             Gson gson = new GsonBuilder().setPrettyPrinting().create();
             
             ClientesWrapper wrapper = new ClientesWrapper();
-            // Convertir valores del diccionario a array para GSON
             Object[] objs = clientes.obtenerValores();
-            wrapper.clientes = new Cliente[objs.length];
+            wrapper.clientes = new ClienteDTO[objs.length];
+            
             for(int i=0; i<objs.length; i++) {
-                wrapper.clientes[i] = (Cliente) objs[i];
+                Cliente c = (Cliente) objs[i];
+                ClienteDTO dto = new ClienteDTO();
+                dto.id = c.getId();
+                dto.nombre = c.getNombre();
+                dto.scoring = c.getScoring();
+                dto.siguiendo = c.getSiguiendo();
+                dto.solicitudes = c.getSolicitudesRecibidasSerialized();
+                wrapper.clientes[i] = dto;
             }
             
             gson.toJson(wrapper, writer);
@@ -101,9 +110,18 @@ public class GestorClientes {
         }
     }
     
+    // DTO para GSON
+    private static class ClienteDTO {
+        int id;
+        String nombre;
+        int scoring;
+        int[] siguiendo;
+        String[] solicitudes;
+    }
+
     // Wrapper interno para GSON
     private static class ClientesWrapper {
-        Cliente[] clientes;
+        ClienteDTO[] clientes;
     }
     
     public void activarHistorial() {
@@ -232,23 +250,23 @@ public class GestorClientes {
 
     /*
     Busca clientes por su scoring de influencia.
+    Recorre el diccionario filtrando por scoring. O(N).
     */
     public Cliente[] buscarPorScoring(int scoring) {
-        Object[] todosLosClientes = clientes.obtenerValores();
+        Object[] todos = clientes.obtenerValores();
         
+        // Primer paso: contar coincidencias
         int count = 0;
-        for (Object obj : todosLosClientes) {
-            Cliente c = (Cliente) obj;
-            if (c.getScoring() == scoring) count++;
+        for (Object obj : todos) {
+            if (((Cliente) obj).getScoring() == scoring) count++;
         }
-
+        
+        // Segundo paso: recolectar
         Cliente[] resultado = new Cliente[count];
-        int index = 0;
-        for (Object obj : todosLosClientes) {
+        int idx = 0;
+        for (Object obj : todos) {
             Cliente c = (Cliente) obj;
-            if (c.getScoring() == scoring) {
-                resultado[index++] = c;
-            }
+            if (c.getScoring() == scoring) resultado[idx++] = c;
         }
         return resultado;
     }
@@ -396,7 +414,11 @@ public class GestorClientes {
 
         switch (accion.getTipo()) {
             case AGREGAR_CLIENTE:
-                clientes.eliminar(Integer.parseInt(datos[0]));
+                int idEliminar = Integer.parseInt(datos[0]);
+                Cliente cEliminar = clientes.obtener(idEliminar);
+                if (cEliminar != null) {
+                    clientes.eliminar(idEliminar);
+                }
                 break;
             case ELIMINAR_CLIENTE:
                 int idRestaurar = Integer.parseInt(datos[0]);
