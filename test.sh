@@ -15,15 +15,15 @@ if [ $? -eq 0 ]; then
     echo ""
     java -ea -cp out:lib/gson-2.10.1.jar TDATest
     
-    if [ $? -eq 0 ]; then
-        echo ""
-        echo "✅ Todos los tests pasaron exitosamente"
-        exit 0
-    else
-        echo ""
-        echo "❌ Algunos tests fallaron"
+    if [ $? -ne 0 ]; then
+        echo "❌ Algunos tests de TDA fallaron"
         exit 1
     fi
+
+    echo ""
+    echo ""
+    echo "✅ Todos los tests pasaron exitosamente"
+    exit 0
 else
     echo "❌ Error de compilación"
     exit 1

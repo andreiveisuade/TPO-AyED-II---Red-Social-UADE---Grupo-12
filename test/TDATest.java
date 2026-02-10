@@ -3,7 +3,7 @@ import modelo.*;
 import servicio.*;
 
 /**
- * Tests unitarios básicos para los TDAs de Iteración 1.
+ * Tests unitarios para los TDAs (Iteración 1 + 2).
  * 
  * Para ejecutar: compilar y ejecutar este archivo.
  * Los tests usan assertions - ejecutar con java -ea TDATest

@@ -14,7 +14,7 @@ INVARIANTE DE REPRESENTACIÓN:
  */
 public class Sesion {
     
-    /* Singleton: instancia única */
+    /* Singleton: instancia única, por eso static*/
     private static Sesion instancia;
     
     /* Atributos */

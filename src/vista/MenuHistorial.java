@@ -16,13 +16,11 @@ public class MenuHistorial {
     private final GestorClientes gestor;
     private final Scanner scanner;
     private final MenuUtils utils;
-    private final util.PerformanceTimer timer;
 
     public MenuHistorial(GestorClientes gestor, Scanner scanner) {
         this.gestor = gestor;
         this.scanner = scanner;
         this.utils = new MenuUtils(scanner);
-        this.timer = new util.PerformanceTimer();
     }
 
     public void mostrar() {
@@ -62,26 +60,20 @@ public class MenuHistorial {
     }
 
     private String verUltimaAccion() {
-        timer.iniciar();
         Accion accion = gestor.verUltimaAccion();
-        timer.detener();
-        String tiempo = timer.obtenerTiempoFormateado();
         
         if (accion != null) {
-            return "Ultima accion: " + accion + " (" + tiempo + ")";
+            return "Ultima accion: " + accion;
         } else {
             return "[AVISO] Historial vacio";
         }
     }
 
     private String deshacerAccion() {
-        timer.iniciar();
         Accion accion = gestor.deshacer();
-        timer.detener();
-        String tiempo = timer.obtenerTiempoFormateado();
         
         if (accion != null) {
-            return "[OK] Deshecho: " + accion + " (" + tiempo + ")";
+            return "[OK] Deshecho: " + accion;
         } else {
             return "[AVISO] No hay acciones para deshacer";
         }
@@ -91,10 +83,7 @@ public class MenuHistorial {
         limpiarPantalla();
         utils.mostrarCabecera("Inicio", "Historial", "Completo");
         
-        timer.iniciar();
         Accion[] acciones = gestor.obtenerHistorialCompleto();
-        timer.detener();
-        String tiempo = timer.obtenerTiempoFormateado();
         
         if (acciones.length == 0) {
             imprimirAviso("El historial esta vacio");
@@ -112,6 +101,5 @@ public class MenuHistorial {
         
         System.out.println();
         System.out.println("Total: " + acciones.length + " acciones");
-        System.out.println("Tiempo: " + tiempo);
     }
 }

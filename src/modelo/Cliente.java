@@ -1,8 +1,8 @@
 package modelo;
 
 import tda.Cola;
-import util.Validador;
 import util.ResultadoValidacion;
+import util.Validador;
 
 /*
 Representa un cliente del sistema con capacidad de seguir a otros clientes.
@@ -30,7 +30,7 @@ public class Cliente {
     private int id;
     private String nombre;
     private int scoring;
-    private tda.Diccionario<Integer, Boolean> siguiendo;  // Diccionario para O(1) y sin límite
+    private tda.Diccionario<Integer, Boolean> siguiendo;  // Diccionario 
     private Cola<SolicitudSeguimiento> solicitudesPendientes;  // Cola de solicitudes recibidas
 
     /*
@@ -259,6 +259,18 @@ public class Cliente {
         }
         
         return resultado;
+    }
+
+    /*
+    Carga IDs de usuarios seguidos desde la persistencia.
+    */
+    public void cargarSiguiendo(int[] ids) {
+        if (ids == null) return;
+        for (int idObjetivo : ids) {
+            if (idObjetivo != this.id) {
+                this.siguiendo.insertar(idObjetivo, true);
+            }
+        }
     }
 
     /*

@@ -186,10 +186,6 @@ public class MenuSolicitudes {
         System.out.print("ID de usuario: ");
         int id = utils.leerEntero();
         
-        // Timer removed as per request to remove external libs if any, though PerformanceTimer is likely internal.
-        // Assuming util.PerformanceTimer is available or handled. 
-        // Keeping logic as is but just adding comments.
-        
         Cliente cliente = gestor.buscarPorId(id);
 
         if (cliente != null) {
