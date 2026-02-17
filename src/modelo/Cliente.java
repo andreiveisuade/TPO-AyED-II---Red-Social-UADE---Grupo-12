@@ -30,7 +30,8 @@ public class Cliente {
     private int id;
     private String nombre;
     private int scoring;
-    private tda.Diccionario<Integer, Boolean> siguiendo;  // Diccionario 
+    private tda.Diccionario<Integer, Boolean> siguiendo;  // Diccionario de usuarios que sigue
+    private tda.Diccionario<Integer, Boolean> seguidores;  // Diccionario de usuarios que lo siguen
     private Cola<SolicitudSeguimiento> solicitudesPendientes;  // Cola de solicitudes recibidas
 
     /*
@@ -56,6 +57,7 @@ public class Cliente {
         this.nombre = nombre;
         this.scoring = scoring;
         this.siguiendo = new tda.Diccionario<>(); // Inicializar diccionario vacío
+        this.seguidores = new tda.Diccionario<>(); // Inicializar diccionario vacío de seguidores
         this.solicitudesPendientes = new Cola<>();  // Inicializar cola vacía
     }
 
@@ -108,6 +110,47 @@ public class Cliente {
     */
     public int getCantidadSiguiendo() {
         return siguiendo.getCantidad();
+    }
+
+    /*
+    Retorna los IDs de los usuarios que siguen a este cliente (seguidores).
+    */
+    public int[] getSeguidores() {
+        String[] claves = seguidores.obtenerClaves();
+        int[] ids = new int[claves.length];
+        for (int i = 0; i < claves.length; i++) {
+            if (claves[i] != null) {
+                try {
+                    ids[i] = Integer.parseInt(claves[i]);
+                } catch (NumberFormatException e) {
+                    ids[i] = 0;
+                }
+            }
+        }
+        return ids;
+    }
+
+    /*
+    Retorna la cantidad de seguidores de este cliente.
+    */
+    public int getCantidadSeguidores() {
+        return seguidores.getCantidad();
+    }
+
+    /*
+    Agrega un seguidor a este cliente (uso interno desde GestorClientes).
+    Visibilidad package-private para evitar manipulación directa.
+    */
+    void agregarSeguidor(int idSeguidor) {
+        seguidores.insertar(idSeguidor, true);
+    }
+
+    /*
+    Elimina un seguidor de este cliente (uso interno desde GestorClientes).
+    Visibilidad package-private para evitar manipulación directa.
+    */
+    void eliminarSeguidor(int idSeguidor) {
+        seguidores.eliminar(idSeguidor);
     }
 
     /*
@@ -289,6 +332,29 @@ public class Cliente {
                     // Ignorar datos corruptos
                 }
             }
+        }
+    }
+
+    /*
+    Serializa los seguidores para guardarlos en el JSON.
+    Complejidad: O(k) donde k es la cantidad de seguidores.
+    */
+    public String[] getSeguidoresSerialized() {
+        int[] ids = getSeguidores();
+        String[] resultado = new String[ids.length];
+        for (int i = 0; i < ids.length; i++) {
+            resultado[i] = String.valueOf(ids[i]);
+        }
+        return resultado;
+    }
+
+    /*
+    Carga seguidores desde la persistencia.
+    */
+    public void cargarSeguidores(int[] ids) {
+        if (ids == null) return;
+        for (int idSeguidor : ids) {
+            this.seguidores.insertar(idSeguidor, true);
         }
     }
 }

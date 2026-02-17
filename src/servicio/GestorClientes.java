@@ -29,7 +29,8 @@ SOLID: SRP - solo gestiona clientes
 public class GestorClientes {
     
     // Esta clase una un diccionario como TDA, donde la clave es el id del cliente, y el valor es el cliente
-    private Diccionario<Integer, Cliente> clientes;
+    private Diccionario<Integer, Cliente> clientes;  // Índice primario por ID
+    private tda.ArbolBinarioBusqueda<Integer, Cliente> indiceScoring;  // Índice secundario por scoring
     private boolean registrarEnHistorial;
     private int proximoId;
     private final String archivoPath;
@@ -49,6 +50,7 @@ public class GestorClientes {
         this.archivoPath = dbPath;
         this.registrarEnHistorial = true;
         this.proximoId = 1001;
+        this.indiceScoring = new tda.ArbolBinarioBusqueda<>();  // Inicializar índice secundario
         cargarDesdeArchivo();
     }
     
@@ -70,7 +72,21 @@ public class GestorClientes {
                     c.cargarSiguiendo(dto.siguiendo);
                     c.cargarSolicitudes(dto.solicitudes);
                     
+                    // Cargar seguidores (puede ser null en versiones antiguas del JSON)
+                    if (dto.seguidores != null) {
+                        int[] idsSeguidores = new int[dto.seguidores.length];
+                        for (int i = 0; i < dto.seguidores.length; i++) {
+                            try {
+                                idsSeguidores[i] = Integer.parseInt(dto.seguidores[i]);
+                            } catch (NumberFormatException e) {
+                                idsSeguidores[i] = 0;
+                            }
+                        }
+                        c.cargarSeguidores(idsSeguidores);
+                    }
+                    
                     clientes.insertar(c.getId(), c);
+                    indiceScoring.insertar(c.getScoring(), c);  // Insertar en índice secundario
                     if(c.getId() >= proximoId) proximoId = c.getId() + 1;
                 }
             }
@@ -100,6 +116,7 @@ public class GestorClientes {
                 dto.scoring = c.getScoring();
                 dto.siguiendo = c.getSiguiendo();
                 dto.solicitudes = c.getSolicitudesRecibidasSerialized();
+                dto.seguidores = c.getSeguidoresSerialized();  // Guardar seguidores
                 wrapper.clientes[i] = dto;
             }
             
@@ -117,6 +134,7 @@ public class GestorClientes {
         int scoring;
         int[] siguiendo;
         String[] solicitudes;
+        String[] seguidores;  // NUEVO campo para seguidores
     }
 
     // Wrapper interno para GSON
@@ -154,6 +172,7 @@ public class GestorClientes {
         int id = proximoId++;
         Cliente cliente = new Cliente(id, nombre, scoring);
         clientes.insertar(id, cliente);
+        indiceScoring.insertar(scoring, cliente);  // Insertar en índice secundario
         
         if (registrarEnHistorial && sesionValida()) {
             Accion accion = new Accion(TipoAccion.AGREGAR_CLIENTE, String.valueOf(id));
@@ -179,6 +198,7 @@ public class GestorClientes {
 
         Cliente cliente = new Cliente(id, nombre, scoring);
         clientes.insertar(id, cliente);
+        indiceScoring.insertar(scoring, cliente);  // Insertar en índice secundario
         
         if (id >= proximoId) {
             proximoId = id + 1;
@@ -249,24 +269,59 @@ public class GestorClientes {
     }
 
     /*
-    Busca clientes por su scoring de influencia.
-    Recorre el diccionario filtrando por scoring. O(N).
+    Busca clientes por su scoring de influencia usando ABB.
+    Complejidad: O(log N + k) donde k = cantidad con ese scoring.
     */
     public Cliente[] buscarPorScoring(int scoring) {
-        Object[] todos = clientes.obtenerValores();
+        Object[] resultados = indiceScoring.buscar(scoring);
+        Cliente[] clientes = new Cliente[resultados.length];
+        for (int i = 0; i < resultados.length; i++) {
+            clientes[i] = (Cliente) resultados[i];
+        }
+        return clientes;
+    }
+
+    /*
+    Obtiene clientes que están en el nivel N del árbol de scoring.
+    Nivel 0 = raíz, nivel 1 = hijos de raíz, etc.
+    */
+    public Cliente[] obtenerClientesEnNivel(int nivel) {
+        if (nivel < 0) return new Cliente[0];
         
-        // Primer paso: contar coincidencias
-        int count = 0;
-        for (Object obj : todos) {
-            if (((Cliente) obj).getScoring() == scoring) count++;
+        Object[] resultados = indiceScoring.obtenerEnNivel(nivel);
+        Cliente[] clientes = new Cliente[resultados.length];
+        for (int i = 0; i < resultados.length; i++) {
+            clientes[i] = (Cliente) resultados[i];
+        }
+        return clientes;
+    }
+
+    /*
+    Obtiene los top N clientes por cantidad de seguidores.
+    Usa ordenamiento in-place para eficiencia de memoria.
+    */
+    public Cliente[] obtenerClientesMasPopulares(int top) {
+        Cliente[] todos = obtenerTodosLosClientes();
+        
+        // Ordenar por cantidad de seguidores (Selection Sort - solo top N)
+        for (int i = 0; i < todos.length - 1 && i < top; i++) {
+            int maxIdx = i;
+            for (int j = i + 1; j < todos.length; j++) {
+                if (todos[j].getCantidadSeguidores() > todos[maxIdx].getCantidadSeguidores()) {
+                    maxIdx = j;
+                }
+            }
+            // Swap
+            Cliente temp = todos[i];
+            todos[i] = todos[maxIdx];
+            todos[maxIdx] = temp;
         }
         
-        // Segundo paso: recolectar
-        Cliente[] resultado = new Cliente[count];
-        int idx = 0;
-        for (Object obj : todos) {
-            Cliente c = (Cliente) obj;
-            if (c.getScoring() == scoring) resultado[idx++] = c;
+        // Retornar top N
+        int cantidad = Math.min(top, todos.length);
+        Cliente[] resultado = new Cliente[cantidad];
+        for (int i = 0; i < cantidad; i++) {
+            resultado[i] = todos[i];
         }
         return resultado;
     }
@@ -302,6 +357,7 @@ public class GestorClientes {
         }
 
         clientes.eliminar(id);
+        indiceScoring.eliminar(cliente.getScoring(), cliente);  // Eliminar de índice secundario
         
         // Limpiar referencias en cascada
         Object[] todosLosClientes = clientes.obtenerValores();
@@ -324,6 +380,8 @@ public class GestorClientes {
         }
 
         if (clienteSolicitante.seguir(idObjetivo)) {
+            clienteObjetivo.agregarSeguidor(idSolicitante);  // Actualizar grafo bidireccional
+            
             if (registrarEnHistorial && sesionValida()) {
                 Accion accion = new Accion(TipoAccion.SEGUIR, 
                                             String.valueOf(idSolicitante), 
@@ -375,10 +433,13 @@ public class GestorClientes {
     Registra que un cliente deja de seguir a otro.
     */
     public boolean dejarDeSeguir(int idSolicitante, int idObjetivo) {
-        Cliente cliente = clientes.obtener(idSolicitante);
-        if (cliente == null) return false;
+        Cliente solicitante = clientes.obtener(idSolicitante);
+        Cliente objetivo = clientes.obtener(idObjetivo);
+        if (solicitante == null || objetivo == null) return false;
 
-        if (cliente.dejarDeSeguir(idObjetivo)) {
+        if (solicitante.dejarDeSeguir(idObjetivo)) {
+            objetivo.eliminarSeguidor(idSolicitante);  // Actualizar grafo bidireccional
+            
             if (registrarEnHistorial && sesionValida()) {
                 Accion accion = new Accion(TipoAccion.DEJAR_DE_SEGUIR, 
                                             String.valueOf(idSolicitante), 
