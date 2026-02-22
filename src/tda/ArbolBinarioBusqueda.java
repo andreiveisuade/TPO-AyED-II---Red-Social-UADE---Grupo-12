@@ -165,8 +165,10 @@ public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
                 // Caso 3: Nodo con dos hijos
                 // Reemplazar con el menor del subárbol derecho (sucesor inorder)
                 NodoABB<K, V> sucesor = encontrarMinimo(nodo.getDerecho());
-                nodo = new NodoABB<>(sucesor.getClave(), sucesor.getValor());
-                nodo.setDerecho(eliminarMinimo(nodo.getDerecho()));
+                NodoABB<K, V> reemplazo = new NodoABB<>(sucesor.getClave(), sucesor.getValor());
+                reemplazo.setIzquierdo(nodo.getIzquierdo());
+                reemplazo.setDerecho(eliminarMinimo(nodo.getDerecho()));
+                nodo = reemplazo;
             } else {
                 // Valor no coincide: puede haber duplicado a la derecha
                 nodo.setDerecho(eliminarRecursivo(nodo.getDerecho(), clave, valor));

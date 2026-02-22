@@ -149,6 +149,7 @@ public class MenuSolicitudes {
             System.out.println(" 2. Buscar por Nombre (y agregar)");
             System.out.println(" 3. Buscar por Influencia");
             System.out.println(" 4. Listar todos");
+            System.out.println(" 5. Análisis ABB - Cuarto nivel");
             System.out.println(" 0. Volver");
             imprimirSeparador(MenuUtils.ANCHO);
             
@@ -172,6 +173,10 @@ public class MenuSolicitudes {
                     break;
                 case 4:
                     listarTodos();
+                    pausar(scanner);
+                    break;
+                case 5:
+                    mostrarCuartoNivelABB();
                     pausar(scanner);
                     break;
             }
@@ -355,6 +360,55 @@ public class MenuSolicitudes {
         }
     }
     
+    /*
+    Muestra los clientes ubicados en el cuarto nivel (nivel 3, 0-indexed) del ABB de scoring,
+    ordenados por cantidad de seguidores de mayor a menor.
+    */
+    private void mostrarCuartoNivelABB() {
+        limpiarPantalla();
+        utils.mostrarCabecera("Inicio", "Amigos", "Explorar", "ABB - Cuarto Nivel");
+
+        Cliente[] clientes = gestor.obtenerClientesEnNivel(3);
+
+        if (clientes.length == 0) {
+            imprimirAviso("No hay clientes en el cuarto nivel del ABB de scoring.");
+            return;
+        }
+
+        // Ordenar por cantidad de seguidores (mayor a menor) - Selection Sort
+        for (int i = 0; i < clientes.length - 1; i++) {
+            int maxIdx = i;
+            for (int j = i + 1; j < clientes.length; j++) {
+                if (clientes[j].getCantidadSeguidores() > clientes[maxIdx].getCantidadSeguidores()) {
+                    maxIdx = j;
+                }
+            }
+            if (maxIdx != i) {
+                Cliente temp = clientes[i];
+                clientes[i] = clientes[maxIdx];
+                clientes[maxIdx] = temp;
+            }
+        }
+
+        System.out.println("+------+--------------------+---------+------------+");
+        System.out.println("| ID   | Usuario            | Scoring | Seguidores |");
+        System.out.println("+------+--------------------+---------+------------+");
+
+        for (Cliente c : clientes) {
+            String idCol = String.format("%-4d", c.getId());
+            String nombreCol = String.format("%-18s", c.getNombre());
+            String scoreCol = String.format("%-7d", c.getScoring());
+            String segCol = String.format("%-10d", c.getCantidadSeguidores());
+            System.out.println("| " + idCol + " | " + nombreCol + "| " + scoreCol + "| " + segCol + " |");
+        }
+        System.out.println("+------+--------------------+---------+------------+");
+        System.out.println("Total: " + clientes.length + " clientes en el cuarto nivel.");
+
+        if (clientes[0].getCantidadSeguidores() > 0) {
+            System.out.println("Mayor influencia: " + clientes[0].getNombre() + " (" + clientes[0].getCantidadSeguidores() + " seguidores)");
+        }
+    }
+
     /*
     Muestra los detalles de un usuario en pantalla.
     */

@@ -141,7 +141,7 @@ public class Cliente {
     Agrega un seguidor a este cliente (uso interno desde GestorClientes).
     Visibilidad package-private para evitar manipulación directa.
     */
-    void agregarSeguidor(int idSeguidor) {
+    public void agregarSeguidor(int idSeguidor) {
         seguidores.insertar(idSeguidor, true);
     }
 
@@ -149,7 +149,7 @@ public class Cliente {
     Elimina un seguidor de este cliente (uso interno desde GestorClientes).
     Visibilidad package-private para evitar manipulación directa.
     */
-    void eliminarSeguidor(int idSeguidor) {
+    public void eliminarSeguidor(int idSeguidor) {
         seguidores.eliminar(idSeguidor);
     }
 
