@@ -47,6 +47,12 @@ public class GestorClientesTest {
         testBuscarPorNombreCaseInsensitive();
         testBuscarPorNombreDuplicados();
         testBuscarPorNombrePostEliminacion();
+        testBuscarPorScoring();
+        testBuscarPorScoringDuplicados();
+        testBuscarPorScoringInexistente();
+        testObtenerClientesEnNivel();
+        testSeguirActualizaSeguidores();
+        testUndoSeguirRevierteSeguidores();
 
         System.out.println("\n═══════════════════════════════════════════");
         System.out.printf("RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
@@ -390,6 +396,141 @@ public class GestorClientesTest {
             reportarExito("Buscar por nombre post-eliminación (índice hash)");
         } catch (AssertionError e) {
             reportarFallo("Buscar por nombre post-eliminación", e.getMessage());
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // TESTS DE ABB SCORING E ITERACIÓN 2
+    // ═══════════════════════════════════════════════════════════════════
+
+    private static void testBuscarPorScoring() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+            gestor.agregarClienteConId(1, "Alice", 95);
+            gestor.agregarClienteConId(2, "Bob", 80);
+
+            Cliente[] encontrados = gestor.buscarPorScoring(95);
+            assert encontrados.length == 1 : "Debe encontrar 1 con scoring 95";
+            assert encontrados[0].getNombre().equals("Alice") : "Debe ser Alice";
+
+            reportarExito("Buscar por scoring");
+        } catch (AssertionError e) {
+            reportarFallo("Buscar por scoring", e.getMessage());
+        }
+    }
+
+    private static void testBuscarPorScoringDuplicados() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+            gestor.agregarClienteConId(1, "Alice", 80);
+            gestor.agregarClienteConId(2, "Bob", 80);
+            gestor.agregarClienteConId(3, "Carol", 90);
+
+            Cliente[] encontrados = gestor.buscarPorScoring(80);
+            assert encontrados.length == 2 : "Debe encontrar 2 con scoring 80, encontró: " + encontrados.length;
+
+            reportarExito("Buscar por scoring con duplicados");
+        } catch (AssertionError e) {
+            reportarFallo("Buscar por scoring con duplicados", e.getMessage());
+        }
+    }
+
+    private static void testBuscarPorScoringInexistente() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+            gestor.agregarClienteConId(1, "Alice", 80);
+
+            Cliente[] encontrados = gestor.buscarPorScoring(99);
+            assert encontrados.length == 0 : "No debe encontrar nada con scoring 99";
+
+            reportarExito("Buscar por scoring inexistente");
+        } catch (AssertionError e) {
+            reportarFallo("Buscar por scoring inexistente", e.getMessage());
+        }
+    }
+
+    private static void testObtenerClientesEnNivel() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+
+            // Insertar con scorings que formen un ABB con al menos 4 niveles
+            // Raíz: 50, nivel 1: 30, 70, nivel 2: 20, 40, 60, 80, nivel 3: 10, 25, 35, 45...
+            gestor.agregarClienteConId(1, "C50", 50);  // nivel 0 (raíz)
+            gestor.agregarClienteConId(2, "C30", 30);  // nivel 1
+            gestor.agregarClienteConId(3, "C70", 70);  // nivel 1
+            gestor.agregarClienteConId(4, "C20", 20);  // nivel 2
+            gestor.agregarClienteConId(5, "C40", 40);  // nivel 2
+            gestor.agregarClienteConId(6, "C60", 60);  // nivel 2
+            gestor.agregarClienteConId(7, "C80", 80);  // nivel 2
+            gestor.agregarClienteConId(8, "C10", 10);  // nivel 3 (cuarto nivel)
+            gestor.agregarClienteConId(9, "C25", 25);  // nivel 3
+
+            // Nivel 0 (raíz)
+            Cliente[] nivel0 = gestor.obtenerClientesEnNivel(0);
+            assert nivel0.length == 1 : "Nivel 0 debe tener 1, tiene: " + nivel0.length;
+
+            // Nivel 3 (cuarto nivel) - debe tener C10 y C25
+            Cliente[] nivel3 = gestor.obtenerClientesEnNivel(3);
+            assert nivel3.length == 2 : "Nivel 3 debe tener 2, tiene: " + nivel3.length;
+
+            reportarExito("Obtener clientes en nivel (cuarto nivel ABB)");
+        } catch (AssertionError e) {
+            reportarFallo("Obtener clientes en nivel (cuarto nivel ABB)", e.getMessage());
+        }
+    }
+
+    private static void testSeguirActualizaSeguidores() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+            int idAlice = gestor.agregarCliente("Alice", 90);
+            int idBob = gestor.agregarCliente("Bob", 80);
+
+            gestor.seguir(idAlice, idBob);
+
+            Cliente bob = gestor.buscarPorId(idBob);
+            assert bob.getCantidadSeguidores() == 1 : "Bob debe tener 1 seguidor";
+
+            Cliente alice = gestor.buscarPorId(idAlice);
+            assert alice.sigueA(idBob) : "Alice debe seguir a Bob";
+
+            // Dejar de seguir también debe actualizar seguidores
+            gestor.dejarDeSeguir(idAlice, idBob);
+            assert bob.getCantidadSeguidores() == 0 : "Bob debe tener 0 seguidores tras dejar de seguir";
+
+            reportarExito("Seguir/dejar de seguir actualiza seguidores");
+        } catch (AssertionError e) {
+            reportarFallo("Seguir/dejar de seguir actualiza seguidores", e.getMessage());
+        }
+    }
+
+    private static void testUndoSeguirRevierteSeguidores() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+            int idAlice = gestor.agregarCliente("Alice", 90);
+            int idBob = gestor.agregarCliente("Bob", 80);
+
+            Cliente alice = gestor.buscarPorId(idAlice);
+            Sesion.getInstancia().iniciarSesion(alice);
+            gestor.activarHistorial();
+
+            gestor.seguir(idAlice, idBob);
+            Cliente bob = gestor.buscarPorId(idBob);
+            assert bob.getCantidadSeguidores() == 1 : "Bob debe tener 1 seguidor";
+
+            // Undo debe revertir AMBOS lados
+            gestor.deshacer();
+            assert !alice.sigueA(idBob) : "Alice ya no debe seguir a Bob";
+            assert bob.getCantidadSeguidores() == 0 : "Bob debe tener 0 seguidores tras undo";
+
+            reportarExito("Undo seguir revierte seguidores (bidireccional)");
+        } catch (AssertionError e) {
+            reportarFallo("Undo seguir revierte seguidores (bidireccional)", e.getMessage());
         }
     }
 
