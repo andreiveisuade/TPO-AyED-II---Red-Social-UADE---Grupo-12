@@ -493,6 +493,20 @@ public class GestorClientes {
         return gestorRelaciones.obtenerSeguidoresOrdenados(idCliente);
     }
 
+    /**
+     * Calcula la distancia (número de saltos) entre dos clientes en la red.
+     * Delegado a GestorRelaciones.
+     *
+     * Complejidad: O(V + E) donde V = clientes alcanzables, E = relaciones
+     *
+     * @param idOrigen  ID del cliente de partida
+     * @param idDestino ID del cliente destino
+     * @return Número de saltos mínimo, 0 si son el mismo, -1 si no hay camino
+     */
+    public int calcularDistancia(int idOrigen, int idDestino) {
+        return gestorRelaciones.calcularDistancia(idOrigen, idDestino);
+    }
+
     // ════════════════════════════════════════════════════════════════════════════════════
     // UNDO/REDO (Historial de Acciones)
     // ════════════════════════════════════════════════════════════════════════════════════

@@ -86,6 +86,7 @@ El sistema implementa una **arquitectura modular y escalable** basada en **SOLID
 | `construirArbolRelaciones()` | O(k log k) | 2 |
 | `obtenerSeguidoresEnNivel()` | O(N) | 2 |
 | `obtenerSeguidoresOrdenados()` | O(N log N) | 2 |
+| `calcularDistancia()` | O(V + E) | 3 |
 
 **Ejemplos de uso:**
 
@@ -334,9 +335,13 @@ PersistenciaClientes.guardarCambios()
 - [x] Consulta por nivel
 - [x] Seguidores ordenados
 
+### Iteración 3
+- [x] Distancia entre clientes (BFS) — `calcularDistancia(idOrigen, idDestino)`
+- [x] Pruebas unitarias para distancia (`DistanciaTest.java`)
+
 ### Calidad de Código
 - [x] SOLID aplicado (20% de rúbrica)
-- [x] Tests pasados (9/9)
+- [x] Tests pasados (10/10+)
 - [x] Documentación
 - [x] Complejidad optimizada
 - [x] Arquitectura modular

@@ -237,4 +237,73 @@ public class GestorRelaciones {
         if (cliente == null) return 0;
         return cliente.getCantidadSeguidores();
     }
+
+    /**
+     * Calcula la distancia (número de saltos) entre dos clientes en la red.
+     *
+     * Utiliza BFS (Breadth-First Search) sobre el grafo de seguimientos.
+     * La dirección de búsqueda es la de los seguidos (aristas dirigidas).
+     *
+     * ALGORITMO BFS:
+     * - Cola de pares (idCliente, distancia) para el recorrido por niveles
+     * - Diccionario de visitados para evitar ciclos: O(1) por consulta
+     *
+     * Complejidad: O(V + E) donde V = clientes alcanzables, E = relaciones
+     *
+     * @param idOrigen  ID del cliente origen
+     * @param idDestino ID del cliente destino
+     * @return Distancia en saltos, 0 si son el mismo, -1 si no hay camino
+     */
+    public int calcularDistancia(int idOrigen, int idDestino) {
+        // Validar que ambos clientes existen
+        if (clientes.obtener(idOrigen) == null || clientes.obtener(idDestino) == null) {
+            return -1;
+        }
+
+        // Caso base: mismo cliente
+        if (idOrigen == idDestino) {
+            return 0;
+        }
+
+        // BFS usando TDAs propios del proyecto
+        // Cola de IDs a visitar (por niveles = distancias)
+        tda.Cola<Integer> cola = new tda.Cola<>();
+        // Diccionario de visitados: ID → true
+        tda.Diccionario<Integer, Boolean> visitados = new tda.Diccionario<>();
+
+        cola.encolar(idOrigen);
+        visitados.insertar(idOrigen, true);
+
+        int distancia = 0;
+
+        while (!cola.estaVacia()) {
+            distancia++;
+            int nodosEnNivel = cola.getCantidad();
+
+            // Procesar todos los nodos del nivel actual (misma distancia)
+            for (int i = 0; i < nodosEnNivel; i++) {
+                int idActual = cola.desencolar();
+                Cliente actual = clientes.obtener(idActual);
+                if (actual == null) continue;
+
+                // Explorar vecinos (clientes que el actual sigue)
+                int[] vecinos = actual.getSiguiendo();
+                for (int idVecino : vecinos) {
+                    if (idVecino == 0) continue; // slot vacío en array
+
+                    if (idVecino == idDestino) {
+                        return distancia;
+                    }
+
+                    if (!visitados.contiene(idVecino)) {
+                        visitados.insertar(idVecino, true);
+                        cola.encolar(idVecino);
+                    }
+                }
+            }
+        }
+
+        // No se encontró camino
+        return -1;
+    }
 }

@@ -288,6 +288,7 @@ Total: O(n * (1 + m + q)) = O(n)
 | `obtenerVecinos()` | O(1) | GestorRelaciones | ✅ k ≤ 2 |
 | `construirArbolRelaciones()` | O(k log k) | GestorRelaciones | ✅ ABB inserción |
 | `obtenerSeguidoresEnNivel()` | O(k) | GestorRelaciones | ✅ Traversal |
+| `calcularDistancia()` | O(V + E) | GestorRelaciones | ✅ BFS custom TDAs |
 | `eliminarCliente()` | O(n) | GestorClientes | ✅ Cascada |
 | `cargarDesdeArchivo()` | O(n) | PersistenciaClientes | ✅ Carga JSON |
 | `guardarCambios()` | O(n) | PersistenciaClientes | ✅ Serialización |

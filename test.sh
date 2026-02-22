@@ -92,6 +92,19 @@ else
 fi
 
 echo ""
+
+# ─── 7. DistanciaTest ───
+echo "Compilando DistanciaTest..."
+javac -cp "$CP" -d out test/DistanciaTest.java $SRC_FILES
+if [ $? -eq 0 ]; then
+    java -ea -cp out:"$CP" DistanciaTest
+    if [ $? -ne 0 ]; then FAILED=1; fi
+else
+    echo "❌ Error compilando DistanciaTest"
+    FAILED=1
+fi
+
+echo ""
 echo "═══════════════════════════════════════════"
 if [ $FAILED -ne 0 ]; then
     echo "❌ Algunos tests fallaron"
