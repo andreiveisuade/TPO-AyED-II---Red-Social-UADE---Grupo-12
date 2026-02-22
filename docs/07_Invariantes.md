@@ -32,6 +32,14 @@ Este documento define formalmente las condiciones lógicas que garantizan la int
 *   Todos los valores almacenados en el diccionario interno son `true`.
 *   No existen claves duplicadas (garantizado por el TDA Diccionario).
 
+### 1.5. `ArbolBinarioBusqueda<K,V>`
+*   `cantidad ≥ 0`.
+*   `raiz != null` ⇔ `cantidad > 0`.
+*   `raiz == null` ⇔ `cantidad == 0`.
+*   Para todo nodo N: todas las claves en el subárbol izquierdo son estrictamente menores que `N.clave`.
+*   Para todo nodo N: todas las claves en el subárbol derecho son mayores o iguales que `N.clave` (duplicados van a la derecha).
+*   La cantidad total de nodos accesibles desde `raiz` es exactamente igual a `cantidad`.
+
 ---
 
 ## 2. Entidades de Dominio
@@ -41,9 +49,12 @@ Este documento define formalmente las condiciones lógicas que garantizan la int
 *   `nombre` no es nulo, no está vacío y no contiene solo espacios.
 *   `0 ≤ scoring ≤ 100`.
 *   `siguiendo` no es nulo (Diccionario inicializado).
+*   `seguidores` no es nulo (Diccionario inicializado).
 *   `solicitudesPendientes` no es nulo (Cola inicializada).
 *   **Reflexividad**: `siguiendo` NO contiene la clave `id` (un cliente no se sigue a sí mismo).
+*   **Límite**: `siguiendo.cantidad ≤ MAX_SEGUIDOS` (actualmente 2).
 *   **Consistencia**: `siguiendo.cantidad` debe ser igual a `getCantidadSiguiendo()`.
+*   **Consistencia bidireccional**: Si cliente A tiene B en `siguiendo`, entonces cliente B tiene A en `seguidores` (mantenido por `GestorClientes`).
 
 ### 2.2. `Sesion` (Singleton)
 *   **Unicidad**: Solo existe una instancia de `Sesion` en el runtime.
@@ -63,18 +74,22 @@ Este documento define formalmente las condiciones lógicas que garantizan la int
 *   `timestamp` no es nulo y representa el momento de creación.
 
 ### 2.5. `SolicitudSeguimiento` (Value Object)
-*   `solicitante` (ID) no es nulo ni vacío.
-*   `objetivo` (ID) no es nulo ni vacío.
-*   `fecha` no es nulo.
+*   `solicitante` (ID como String) no es nulo ni vacío.
+*   `objetivo` (ID como String) no es nulo ni vacío.
+*   `solicitante` != `objetivo` (un cliente no puede solicitarse seguir a sí mismo).
 
 ---
 
 ## 3. Gestores del Sistema
 
 ### 3.1. `GestorClientes`
-*   `clientes` no es nulo.
+*   `clientes` no es nulo (Diccionario principal por ID).
+*   `indiceScoring` no es nulo (ABB secundario por scoring).
+*   `indiceNombre` no es nulo (Diccionario secundario por nombre).
 *   `proximoId` siempre es mayor que el mayor ID existente en el sistema.
 *   Para todo `Cliente c` en `clientes`, `c.id` corresponde a su clave en el diccionario.
+*   **Sincronización de índices**: Todo cliente en `clientes` debe existir también en `indiceScoring` (bajo su scoring) y en `indiceNombre` (bajo su nombre en lowercase).
+*   **Consistencia inversa**: Todo cliente referenciado en `indiceScoring` o `indiceNombre` debe existir en `clientes`.
 
 ---
 

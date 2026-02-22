@@ -14,8 +14,10 @@ Se ha diseñado el sistema priorizando un límite superior asintótico de **O(1)
 | **Pila** | `IPila<T>` | *Linked List (LIFO)* | O(1) | O(1) | O(1) | Gestión de estados temporales (Historial). |
 | **Cola** | `ICola<T>` | *Linked List (FIFO)* | O(1) | O(1) | O(1) | Buffer de procesamiento secuencial. |
 | **Conjunto** | `IConjunto` | *Hash Set Adapter* | O(1)* | O(1)* | O(1)* | Validación de unicidad. |
+| **ABB** | `IArbolBinarioBusqueda<K,V>` | *BST con duplicados* | O(log N)** | O(log N)** | O(log N)** | Índice secundario por scoring. |
 
 *\* Amortizado promedio, asumiendo Función Hash uniforme y factor de carga controlado.*
+*\*\* Promedio, asumiendo distribución razonablemente uniforme de claves. Peor caso O(N) si el árbol degenera.*
 
 ---
 
@@ -48,9 +50,14 @@ El sistema instancia esta estructura de dos formas críticas:
     *   **Justificación**: Al tener M > N (1.000.003 > 1.000.000), el factor de carga α ≈ 1. Esto minimiza drásticamente las colisiones.
     *   **Impacto**: Buscar un usuario por ID es instantáneo.
 
-#### B. Grafo de Relaciones (`Cliente`)
-*   **Instancia**: `Diccionario<Integer, Boolean> siguiendo`.
-*   **Uso**: Representa las aristas salientes del grafo social.
+#### B. Índice por Nombre (`GestorClientes`)
+*   **Instancia**: `Diccionario<String, Cola<Cliente>> indiceNombre`.
+*   **Uso**: Índice secundario que agrupa clientes por nombre normalizado (lowercase).
+*   **Ventaja**: Búsqueda por nombre en **O(1)** en lugar de O(N) secuencial.
+
+#### C. Grafo de Relaciones (`Cliente`)
+*   **Instancia**: `Diccionario<Integer, Boolean> siguiendo` y `Diccionario<Integer, Boolean> seguidores`.
+*   **Uso**: Representa las aristas salientes y entrantes del grafo social (bidireccional).
 *   **Ventaja**: Permite verificar si "Usuario A sigue a Usuario B" (`sigueA(id)`) en **O(1)**.
 
 ---
@@ -102,7 +109,45 @@ La clase `Conjunto` se implementa como un **Adapter** sobre el `Diccionario`.
 
 ---
 
-## 6. Abstracción y Diseño Orientado a Objetos
+## 6. Árbol Binario de Búsqueda (ABB)
+
+### 6.1. Fundamentación Teórica
+El **ABB** es una estructura jerárquica donde cada nodo mantiene la propiedad: claves del subárbol izquierdo < clave del nodo <= claves del subárbol derecho. Permite búsquedas O(log N) en promedio, y recorridos ordenados naturales (inorder).
+
+### 6.2. Implementación en Java
+La clase `ArbolBinarioBusqueda<K extends Comparable<K>, V>` implementa un ABB genérico con soporte para duplicados.
+*   **Estructura Interna**: `NodoABB<K, V> raiz` con punteros `izquierdo` y `derecho`.
+*   **Duplicados**: Claves iguales se insertan en el subárbol derecho.
+*   **Eliminación**: Maneja los 3 casos clásicos (hoja, un hijo, dos hijos con sucesor inorder).
+*   **Recorrido por niveles**: BFS usando `Cola` (TDA propio) para obtener nodos en un nivel específico.
+
+### 6.3. Aplicación en el Sistema: Índice por Scoring
+*   **Instancia**: `ArbolBinarioBusqueda<Integer, Cliente> indiceScoring` dentro de `GestorClientes`.
+*   **Ventaja**: Búsqueda por scoring pasa de O(N) a **O(log N + k)** donde k = coincidencias.
+*   **Caso de uso**: Obtener clientes en el cuarto nivel del árbol para análisis de distribución de scoring.
+
+---
+
+## 7. Índice Secundario por Nombre
+
+### 7.1. Fundamentación
+La búsqueda por nombre originalmente requería un recorrido lineal O(N) de todos los clientes. Para cumplir con el requerimiento de búsquedas eficientes, se implementó un **índice hash secundario**.
+
+### 7.2. Implementación
+*   **Instancia**: `Diccionario<String, Cola<Cliente>> indiceNombre` dentro de `GestorClientes`.
+*   **Clave**: Nombre normalizado (lowercase) para búsqueda case-insensitive.
+*   **Valor**: `Cola<Cliente>` que agrupa los clientes con el mismo nombre (puede haber duplicados).
+*   **Complejidad**: O(1) para el lookup + O(k) para recorrer las k coincidencias.
+
+### 7.3. Sincronización
+El índice se mantiene sincronizado con el diccionario principal en todas las operaciones:
+*   `agregarCliente()`: Inserta en el índice.
+*   `eliminarCliente()`: Elimina del índice (reconstruye la cola sin el cliente eliminado).
+*   `ejecutarUndo()`: Actualiza el índice al deshacer agregar o eliminar.
+
+---
+
+## 8. Abstracción y Diseño Orientado a Objetos
 
 El sistema demuestra madurez en ingeniería de software mediante el uso estricto de **Interfaces y Genéricos**.
 
@@ -122,8 +167,10 @@ El uso de `<T>`, `<K, V>` permite un **Polimorfismo Paramétrico**. Una única c
 ```mermaid
 classDiagram
     %% Relaciones de Uso
-    GestorClientes ..> IDiccionario : usa <Integer, Cliente>
-    Cliente ..> IDiccionario : usa <Integer, Boolean>
+    GestorClientes ..> IDiccionario : usa <Integer, Cliente> (índice por ID)
+    GestorClientes ..> IDiccionario : usa <String, Cola> (índice por nombre)
+    GestorClientes ..> IArbolBinarioBusqueda : usa <Integer, Cliente> (índice por scoring)
+    Cliente ..> IDiccionario : usa <Integer, Boolean> (siguiendo + seguidores)
     Cliente ..> ICola : usa <Solicitud>
     HistorialAcciones ..> IPila : usa <Accion>
 
@@ -131,6 +178,11 @@ classDiagram
     class IDiccionario~K,V~ {
         +insertar(K, V)
         +obtener(K): V
+    }
+    class IArbolBinarioBusqueda~K,V~ {
+        +insertar(K, V)
+        +buscar(K): Object[]
+        +obtenerEnNivel(int): Object[]
     }
     class IPila~T~ {
         +apilar(T)
@@ -146,6 +198,10 @@ classDiagram
         -tabla: Nodo[]
         -h(k): int
     }
+    class ArbolBinarioBusqueda~K,V~ {
+        -raiz: NodoABB
+        -cantidad: int
+    }
     class Pila~T~ {
         -tope: Nodo
     }
@@ -155,6 +211,7 @@ classDiagram
     }
 
     IDiccionario <|.. Diccionario
+    IArbolBinarioBusqueda <|.. ArbolBinarioBusqueda
     IPila <|.. Pila
     ICola <|.. Cola
 ```
@@ -162,9 +219,10 @@ classDiagram
 ## 8. Conclusión
 
 La selección de estructuras no es accidental, sino el resultado de un análisis de los requisitos no funcionales del sistema:
-1.  **Diccionario O(1)**: Necesario por el volumen de 1M de usuarios.
-2.  **Pila LIFO**: Necesaria por la lógica de reversión temporal (Undo).
-3.  **Cola FIFO**: Necesaria por la lógica de equidad temporal (Solicitudes).
+1.  **Diccionario O(1)**: Necesario por el volumen de 1M de usuarios (índice por ID y por nombre).
+2.  **ABB O(log N)**: Necesario para búsquedas por scoring sin recorrer todos los clientes.
+3.  **Pila LIFO**: Necesaria por la lógica de reversión temporal (Undo).
+4.  **Cola FIFO**: Necesaria por la lógica de equidad temporal (Solicitudes).
 
 ## 9. Análisis de Escalabilidad (Escenario 10M+ Usuarios)
 

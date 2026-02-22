@@ -21,20 +21,22 @@ Se implementó un **Árbol Binario de Búsqueda (ABB)** como **índice secundari
 
 ```
 GestorClientes
-├── Diccionario<Integer, Cliente> clientes      (índice primario por ID - O(1))
-└── ArbolBinarioBusqueda<Integer, Cliente> indiceScoring  (índice secundario por scoring - O(log N))
+├── Diccionario<Integer, Cliente> clientes                  (índice primario por ID - O(1))
+├── ArbolBinarioBusqueda<Integer, Cliente> indiceScoring    (índice secundario por scoring - O(log N))
+└── Diccionario<String, Cola<Cliente>> indiceNombre         (índice secundario por nombre - O(1))
 ```
 
 ### Justificación
 
-| Operación | Diccionario (ID) | ABB (Scoring) | Decisión |
-|-----------|------------------|---------------|----------|
-| Buscar por ID | **O(1)** | O(log N) | Diccionario gana |
-| Buscar por scoring | O(N) | **O(log N + k)** | ABB gana |
-| Iteración ordenada | No | Sí (inorder) | ABB gana |
-| Análisis por niveles | No | Sí (BFS) | ABB gana |
+| Operación | Diccionario (ID) | ABB (Scoring) | Diccionario (Nombre) | Decisión |
+|-----------|------------------|---------------|---------------------|----------|
+| Buscar por ID | **O(1)** | O(log N) | - | Diccionario gana |
+| Buscar por scoring | O(N) | **O(log N + k)** | - | ABB gana |
+| Buscar por nombre | O(N) | - | **O(1 + k)** | Diccionario nombre gana |
+| Iteración ordenada | No | Sí (inorder) | No | ABB gana |
+| Análisis por niveles | No | Sí (BFS) | No | ABB gana |
 
-**Patrón aplicado**: Multiple Indexing (dos estructuras complementarias)
+**Patrón aplicado**: Multiple Indexing (tres estructuras complementarias)
 
 ---
 
@@ -158,11 +160,13 @@ public Object[] obtenerEnNivel(int nivel) {
 public class GestorClientes {
     // Índices
     private Diccionario<Integer, Cliente> clientes;  // Primario por ID
-    private ArbolBinarioBusqueda<Integer, Cliente> indiceScoring;  // NUEVO: Secundario por scoring
-    
+    private ArbolBinarioBusqueda<Integer, Cliente> indiceScoring;  // Secundario por scoring
+    private Diccionario<String, Cola<Cliente>> indiceNombre;  // Secundario por nombre
+
     public GestorClientes(String dbPath) {
-        this.clientes = new Diccionario<>(CAPACIDAD_INICIAL);
-        this.indiceScoring = new ArbolBinarioBusqueda<>();  // NUEVO
+        this.clientes = new Diccionario<>(1000003);
+        this.indiceScoring = new ArbolBinarioBusqueda<>();
+        this.indiceNombre = new Diccionario<>(1000003);
         cargarDesdeArchivo();
     }
 }
@@ -170,30 +174,33 @@ public class GestorClientes {
 
 ### Sincronización de Índices
 
-**Regla crítica**: Toda operación que modifique clientes debe actualizar AMBOS índices.
+**Regla crítica**: Toda operación que modifique clientes debe actualizar los **3 índices**.
 
 ```java
 // AGREGAR
 public int agregarCliente(String nombre, int scoring) {
     Cliente cliente = new Cliente(id, nombre, scoring);
-    clientes.insertar(id, cliente);              // Índice 1
-    indiceScoring.insertar(scoring, cliente);    // Índice 2
+    clientes.insertar(id, cliente);              // Índice 1: por ID
+    indiceScoring.insertar(scoring, cliente);    // Índice 2: por scoring
+    agregarAlIndiceNombre(cliente);              // Índice 3: por nombre
     return id;
 }
 
 // ELIMINAR
 public boolean eliminarCliente(int id) {
     Cliente cliente = clientes.obtener(id);
-    clientes.eliminar(id);                       // Índice 1
-    indiceScoring.eliminar(cliente.getScoring(), cliente);  // Índice 2
+    clientes.eliminar(id);                                    // Índice 1
+    indiceScoring.eliminar(cliente.getScoring(), cliente);    // Índice 2
+    eliminarDelIndiceNombre(cliente);                          // Índice 3
     return true;
 }
 
 // CARGAR (al iniciar)
 for (ClienteDTO dto : wrapper.clientes) {
     Cliente c = new Cliente(dto.id, dto.nombre, dto.scoring);
-    clientes.insertar(c.getId(), c);
-    indiceScoring.insertar(c.getScoring(), c);   // NUEVO
+    clientes.insertar(c.getId(), c);             // Índice 1
+    indiceScoring.insertar(c.getScoring(), c);   // Índice 2
+    agregarAlIndiceNombre(c);                    // Índice 3
 }
 ```
 
@@ -347,18 +354,19 @@ Inserción: 10, 20, 30, 40, 50
 Cada `Cliente` está referenciado en:
 - `Diccionario` (índice por ID)
 - `ArbolBinarioBusqueda` (índice por scoring)
+- `Diccionario` (índice por nombre, dentro de una `Cola`)
 
-**Impacto**: Overhead de ~8 bytes por cliente (punteros adicionales)
+**Impacto**: Overhead de ~16 bytes por cliente (punteros adicionales en 3 estructuras)
 
-**Beneficio**: Búsquedas rápidas para ambas claves (ID y scoring)
+**Beneficio**: Búsquedas rápidas para las 3 claves (ID, scoring, nombre)
 
 ---
 
 ### 3. Complejidad de Mantenimiento
 
-Cualquier modificación a clientes requiere actualizar DOS estructuras.
+Cualquier modificación a clientes requiere actualizar TRES estructuras.
 
-**Mitigación**: Encapsulación. Solo `GestorClientes` puede modificar clientes.
+**Mitigación**: Encapsulación. Solo `GestorClientes` puede modificar clientes. Métodos privados `agregarAlIndiceNombre()` y `eliminarDelIndiceNombre()` centralizan la lógica.
 
 ---
 
@@ -432,19 +440,21 @@ testSeguidoresBidireccionales()   // Verifica rastreo de seguidores
 
 ## Conclusión
 
-La integración del ABB logra:
+La integración de los índices secundarios logra:
 
-✅ **Búsqueda eficiente**: O(log N) vs O(N) original (hasta 10,000x mejora en datasets grandes)
+✅ **Búsqueda por scoring**: O(log N) vs O(N) original mediante ABB
+
+✅ **Búsqueda por nombre**: O(1) vs O(N) original mediante Diccionario hash
 
 ✅ **Análisis de niveles**: Cumple requisito "ver clientes en el cuarto nivel"
 
 ✅ **Mantenimiento de patrones**: Sigue usando Diccionario para ID, respeta arquitectura en capas
 
-✅ **Sin regresiones**: Todos los tests existentes pasan
+✅ **Sin regresiones**: Todos los 74 tests pasan
 
 ✅ **Rastreo de seguidores**: Grafo bidireccional (siguiendo + seguidores)
 
-⚠️ **Limitación conocida**: El árbol NO está balanceado (aceptable para proyecto académico)
+⚠️ **Limitación conocida**: El ABB NO está balanceado (aceptable para proyecto académico)
 
 **Próximos pasos recomendados**:
 1. Agregar balanceo AVL (si el curso lo requiere)

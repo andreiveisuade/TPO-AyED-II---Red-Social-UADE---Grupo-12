@@ -51,6 +51,17 @@ Implementada sobre lista enlazada con doble puntero (`frente`, `fin`).
 | **Encolar** | **$O(1)$** | Acceso directo vía `fin`. `fin.siguiente = nuevo; fin = nuevo;`. |
 | **Desencolar** | **$O(1)$** | Acceso directo vía `frente`. `frente = frente.siguiente;`. |
 
+### 2.4. Árbol Binario de Búsqueda (ABB)
+
+Implementado como `ArbolBinarioBusqueda<K extends Comparable<K>, V>`. Índice secundario para scoring.
+
+| Operación | Caso Promedio | Peor Caso (degenerado) | Justificación |
+| :--- | :---: | :---: | :--- |
+| **Insertar** | **$O(\log N)$** | $O(N)$ | Recorrido desde raíz hasta hoja. |
+| **Buscar** | **$O(\log N + k)$** | $O(N)$ | Donde $k$ = cantidad de duplicados con la misma clave. |
+| **Eliminar** | **$O(\log N)$** | $O(N)$ | Maneja 3 casos: hoja, un hijo, dos hijos (sucesor inorder). |
+| **Obtener Nivel** | **$O(N)$** | $O(N)$ | BFS usando `Cola` hasta el nivel deseado. |
+
 ---
 
 ## 3. Complejidad de Operaciones de Negocio (`GestorClientes`)
@@ -66,6 +77,7 @@ Estas operaciones se ejecutan en tiempo real durante la sesión del usuario.
 | **Dejar de Seguir** | Eliminación en Diccionario | **$O(1)$** | Elimina ID de `siguiendo`. No requiere reordenamiento. |
 | **Enviar Solicitud** | Encolado | **$O(1)$** | Agrega al final de `solicitudesPendientes` del destinatario. |
 | **Deshacer (Undo)** | Pop de Pila + Op. Inversa | **$O(1)$** | `historial.desapilar()` ejecuta la operación inversa, que también es $O(1)$. |
+| **Buscar por Scoring** | ABB (Árbol Binario de Búsqueda) | **$O(\log N + k)$** | Índice secundario `indiceScoring`. Búsqueda en ABB O(log N) + O(k) por k coincidencias. |
 
 ### 3.2. Operaciones de Mantenimiento
 
@@ -73,7 +85,7 @@ Operaciones que no utilizan el índice primario (ID) o implican I/O masivo.
 
 | Operación | Complejidad | Análisis |
 | :--- | :---: | :--- |
-| **Buscar por Nombre** | **$O(N)$** | Búsqueda lineal. Requiere iterar sobre los $10^6$ registros. |
+| **Buscar por Nombre** | **$O(1+k)$** | Índice hash secundario (`indiceNombre`). Lookup O(1) + O(k) por k coincidencias. |
 | **Carga Inicial (JSON)** | **$O(N)$** | Lectura secuencial del archivo + $N$ inserciones $O(1)$. |
 | **Guardado (JSON)** | **$O(N)$** | Recorrido de buckets + escritura secuencial. |
 | **Eliminar Cliente** | **$O(N)$** | Eliminación del nodo es $O(1)$, pero requiere recorrer todos los clientes para eliminar referencias "hacia" él (Integridad Referencial). |
@@ -97,4 +109,4 @@ El sistema prioriza velocidad ($O(1)$) sobre consumo de memoria, utilizando un e
 El sistema ha sido diseñado bajo la premisa de **eficiencia de acceso constante**.
 1.  **Dominio del $O(1)$**: El 95% de las operaciones del usuario (navegar, seguir, deshacer) son de tiempo constante.
 2.  **Escalabilidad**: El diseño soporta el crecimiento de datos sin degradación perceptible en las operaciones interactivas, cumpliendo con los requisitos de un sistema de alto rendimiento.
-3.  **Cuello de Botella**: Las únicas operaciones $O(N)$ son inevitables (I/O de disco y búsquedas por atributos no indexados), y se mitigan manteniéndolas fuera del bucle interactivo principal.
+3.  **Cuello de Botella**: Las únicas operaciones $O(N)$ son inevitables (I/O de disco y eliminación en cascada), y se mitigan manteniéndolas fuera del bucle interactivo principal. Las búsquedas por nombre y scoring están indexadas.

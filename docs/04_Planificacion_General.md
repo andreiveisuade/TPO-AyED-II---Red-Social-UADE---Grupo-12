@@ -10,15 +10,16 @@ El proyecto se despliega en iteraciones incrementales para garantizar la entrega
 
 ### 1.1. Iteración 1: Gestión Core (Completada)
 *   Administración de ciclo de vida de clientes (CRUD).
-*   Gestión de historial transaccional (Undo/Redo) mediante patrón Command.
+*   Gestión de historial transaccional (Undo) mediante patrón Command.
 *   Procesamiento asíncrono de solicitudes de seguimiento (Cola FIFO).
 *   Carga masiva de datos y persistencia.
 
-### 1.2. Iteración 2: Relaciones y Búsqueda (Futura)
-*   Implementación de relaciones dirigidas ("Seguir").
-*   Búsqueda por scoring mediante recorrido del diccionario.
-*   Implementación de ABB para modelar relaciones de seguimiento y consultas por nivel.
-*   Consultas estructurales (e.g., usuarios en nivel K del árbol).
+### 1.2. Iteración 2: Relaciones y Búsqueda (Completada)
+*   Implementación de relaciones dirigidas ("Seguir") con límite de 2 seguidos (`MAX_SEGUIDOS`).
+*   Búsqueda eficiente por scoring mediante ABB como índice secundario (O(log N)).
+*   Búsqueda eficiente por nombre mediante Diccionario hash como índice secundario (O(1)).
+*   Implementación de ABB para consultas por nivel (cuarto nivel del árbol).
+*   Rastreo bidireccional de seguidores (`siguiendo` + `seguidores` por cliente).
 
 ### 1.3. Iteración 3: Análisis de Red (Futura)
 *   Modelado de amistades mediante Grafos no dirigidos.
@@ -35,8 +36,7 @@ El proyecto se despliega en iteraciones incrementales para garantizar la entrega
 
 ### 2.2. Operaciones Transaccionales
 *   **CU-04 Deshacer Acción**: Reversión de la última operación mutadora del estado.
-*   **CU-05 Rehacer Acción**: Restauración de una operación previamente deshecha.
-*   **CU-06 Auditoría**: Visualización secuencial del historial de operaciones.
+*   **CU-05 Auditoría**: Visualización secuencial del historial de operaciones.
 
 ### 2.3. Gestión de Solicitudes
 *   **CU-07 Encolar Solicitud**: Registro de petición de seguimiento en buffer FIFO.
@@ -53,6 +53,7 @@ El proyecto se despliega en iteraciones incrementales para garantizar la entrega
 | `nombre` | String | Not Null, Not Empty |
 | `scoring` | Integer | [0, 100] |
 | `siguiendo` | Diccionario | Colección de relaciones salientes |
+| `seguidores` | Diccionario | Colección de relaciones entrantes |
 | `solicitudes` | Cola | Buffer de entrada de peticiones |
 
 ### 3.2. Entidad `Accion` (Value Object)
@@ -70,7 +71,8 @@ Se migró de una implementación lineal O(n) a una tabla hash con encadenamiento
 
 | Estructura | Complejidad | Justificación |
 | :--- | :--- | :--- |
-| **Diccionario** | O(1) Amortizado | Acceso crítico por ID en dataset masivo (1M+). |
+| **Diccionario** | O(1) Amortizado | Acceso crítico por ID en dataset masivo (1M+). También usado como índice por nombre. |
+| **ABB** | O(log N) Promedio | Índice secundario por scoring. Consultas por nivel (BFS). |
 | **Pila** | O(1) | Semántica LIFO nativa para gestión de historial. |
 | **Cola** | O(1) | Semántica FIFO requerida para equidad en solicitudes. |
 
@@ -135,10 +137,10 @@ Se priorizan pruebas de caja blanca para componentes críticos:
 | Operación | Tiempo | Espacio |
 |-----------|--------|---------|
 | Insertar cliente | O(1) | O(1) |
-| Buscar por nombre | O(N) | O(N) |
-| Buscar por scoring | O(N) | O(N) |
+| Buscar por nombre | O(1 + k) | O(k) |
+| Buscar por scoring | O(log N + k) | O(k) |
 | Eliminar cliente (cascada) | O(n + E) | O(k) |
-| Undo/Redo | O(costo operación) | O(1) |
+| Undo | O(costo operación) | O(1) |
 | Agregar solicitud | O(1) | O(1) |
 | Procesar solicitud | O(1) | O(1) |
 | Agregar conexión | O(1) | O(1) |
@@ -163,8 +165,8 @@ Se priorizan pruebas de caja blanca para componentes críticos:
 
 | Patrón | Aplicación |
 |--------|------------|
-| **Information Expert** | `Cliente` conoce sus seguidos, `Grafo` conoce sus adyacencias |
-| **Creator** | `GestorClientes` crea instancias de `Cliente`, `JsonLoader` crea objetos desde JSON |
+| **Information Expert** | `Cliente` conoce sus seguidos y seguidores, `GestorClientes` conoce los índices |
+| **Creator** | `GestorClientes` crea instancias de `Cliente` y gestiona la carga desde JSON |
 | **Controller** | `Menu` coordina la interacción usuario-sistema sin lógica de negocio |
 | **Low Coupling** | TDAs no dependen entre sí; servicios solo conocen las interfaces de TDAs |
 | **High Cohesion** | Cada módulo tiene responsabilidades relacionadas (`tda/` solo estructuras, `modelo/` solo entidades) |
@@ -174,32 +176,35 @@ Se priorizan pruebas de caja blanca para componentes críticos:
 
 ---
 
-## 12. Preparación Técnica para Iteración 2
+## 12. Índices Secundarios Implementados (Iteración 2)
 
-### 12.1. Estructura de ABB (ya implementada)
+### 12.1. Estructura Triple de Indexación en `GestorClientes`
 
-| Archivo | Descripción |
-|---------|-------------|
-| `src/tda/ABB.java` | Implementación del Árbol Binario de Búsqueda |
-| `src/tda/NodoABB.java` | Nodo del árbol con clave, valor, izquierdo, derecho |
+| Índice | Estructura | Archivo | Clave | Complejidad |
+|--------|-----------|---------|-------|-------------|
+| Primario (ID) | `Diccionario<Integer, Cliente>` | `src/tda/Diccionario.java` | ID del cliente | O(1) |
+| Scoring | `ArbolBinarioBusqueda<Integer, Cliente>` | `src/tda/ArbolBinarioBusqueda.java` | Scoring (0-100) | O(log N) |
+| Nombre | `Diccionario<String, Cola<Cliente>>` | `src/tda/Diccionario.java` + `src/tda/Cola.java` | Nombre (lowercase) | O(1) |
 
-### 12.2. Uso del ABB según consigna
+### 12.2. ABB como Índice por Scoring
 
-Según la consigna de Iteración 2, el ABB se utilizará para **modelar las relaciones de seguimiento** entre clientes, permitiendo imprimir los clientes en el cuarto nivel del árbol para determinar quién tiene más seguidores.
+El ABB se usa como **índice secundario por scoring**, permitiendo:
+*   Búsqueda eficiente por scoring: O(log N + k).
+*   Consultas por nivel (BFS): Obtener clientes en el cuarto nivel del árbol para ver quién tiene más seguidores.
+*   Manejo de duplicados: Clientes con mismo scoring van al subárbol derecho.
 
-> **Nota sobre scoring**: Inicialmente se implementó el ABB como índice secundario por scoring, pero fue descartado porque con 1M de clientes y solo 101 valores posibles de scoring (0-100), el árbol degeneraba a una lista enlazada (~10.000 nodos por valor), causando stack overflow en la inserción recursiva. La búsqueda por scoring se resuelve con un recorrido lineal O(N) del diccionario, que es eficiente en la práctica (~1s para 1M registros).
+### 12.3. Diccionario como Índice por Nombre
 
-### 12.3. Operaciones del ABB
+El índice por nombre usa un `Diccionario<String, Cola<Cliente>>` donde:
+*   La clave es el nombre normalizado (lowercase).
+*   El valor es una `Cola<Cliente>` con todos los clientes que comparten ese nombre.
+*   Permite búsqueda O(1) en lugar del recorrido lineal O(N) original.
 
-| Operación | Complejidad Esperada |
-|-----------|---------------------|
-| `insertar(clave, valor)` | O(log n) promedio |
-| `buscar(clave)` | O(log n) promedio |
-| `eliminar(clave, valor)` | O(log n) promedio |
-| `buscarRango(min, max)` | O(log n + k) |
-| `inOrder()` | O(n) |
+### 12.4. Sincronización de Índices
 
-### 12.4. Invariantes del ABB
+Toda operación que modifique clientes (agregar, eliminar, undo) debe actualizar los **3 índices** simultáneamente para mantener consistencia.
+
+### 12.5. Invariantes del ABB
 
 - Nodo izquierdo < Nodo padre
 - Nodo derecho >= Nodo padre (permite duplicados)
