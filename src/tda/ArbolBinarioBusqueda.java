@@ -79,24 +79,24 @@ public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
         if (clave == null) {
             return new Object[0];
         }
-        
-        // Usar una lista temporal para recolectar resultados
-        java.util.ArrayList<V> resultados = new java.util.ArrayList<>();
+
+        // Usar Cola propia como colector de resultados
+        Cola<V> resultados = new Cola<>();
         buscarRecursivo(raiz, clave, resultados);
-        return resultados.toArray();
+        return colaAArray(resultados);
     }
 
     /*
     Método auxiliar recursivo para búsqueda.
     Recolecta todos los nodos con la clave coincidente.
     */
-    private void buscarRecursivo(NodoABB<K, V> nodo, K clave, java.util.ArrayList<V> resultados) {
+    private void buscarRecursivo(NodoABB<K, V> nodo, K clave, Cola<V> resultados) {
         if (nodo == null) {
             return;
         }
 
         int comparacion = clave.compareTo(nodo.getClave());
-        
+
         if (comparacion < 0) {
             // La clave buscada es menor: solo buscar en izquierda
             buscarRecursivo(nodo.getIzquierdo(), clave, resultados);
@@ -105,8 +105,8 @@ public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
             buscarRecursivo(nodo.getDerecho(), clave, resultados);
         } else {
             // Clave coincide: agregar este nodo
-            resultados.add(nodo.getValor());
-            
+            resultados.encolar(nodo.getValor());
+
             // Pueden haber duplicados a la derecha (por nuestra regla de inserción)
             buscarRecursivo(nodo.getDerecho(), clave, resultados);
         }
@@ -219,28 +219,28 @@ public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
             return new Object[0];
         }
         
-        java.util.ArrayList<V> resultados = new java.util.ArrayList<>();
+        Cola<V> resultados = new Cola<>();
         Cola<NodoABB<K, V>> cola = new Cola<>();
         cola.encolar(raiz);
-        
+
         int nivelActual = 0;
-        
+
         while (!cola.estaVacia()) {
             int nodosEnNivel = cola.getCantidad();
-            
+
             // Si llegamos al nivel deseado, recolectar todos los nodos
             if (nivelActual == nivel) {
                 for (int i = 0; i < nodosEnNivel; i++) {
                     NodoABB<K, V> nodo = cola.desencolar();
-                    resultados.add(nodo.getValor());
+                    resultados.encolar(nodo.getValor());
                 }
                 break;
             }
-            
+
             // Procesar todos los nodos del nivel actual
             for (int i = 0; i < nodosEnNivel; i++) {
                 NodoABB<K, V> nodo = cola.desencolar();
-                
+
                 // Encolar hijos para el siguiente nivel
                 if (nodo.getIzquierdo() != null) {
                     cola.encolar(nodo.getIzquierdo());
@@ -249,11 +249,11 @@ public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
                     cola.encolar(nodo.getDerecho());
                 }
             }
-            
+
             nivelActual++;
         }
-        
-        return resultados.toArray();
+
+        return colaAArray(resultados);
     }
 
     /*
@@ -271,10 +271,23 @@ public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
         if (nodo == null) {
             return -1;
         }
-        
+
         int alturaIzq = getAlturaRecursiva(nodo.getIzquierdo());
         int alturaDer = getAlturaRecursiva(nodo.getDerecho());
-        
+
         return 1 + Math.max(alturaIzq, alturaDer);
+    }
+
+    /*
+    Convierte una Cola propia a Object[].
+    Complejidad: O(k) donde k = cantidad de elementos en la cola.
+    */
+    private Object[] colaAArray(Cola<V> cola) {
+        int tam = cola.getCantidad();
+        Object[] resultado = new Object[tam];
+        for (int i = 0; i < tam; i++) {
+            resultado[i] = cola.desencolar();
+        }
+        return resultado;
     }
 }
