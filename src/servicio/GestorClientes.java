@@ -538,17 +538,29 @@ public class GestorClientes {
                 agregarAlIndiceNombre(restaurado);
                 if (datos.length > 3 && !datos[3].isEmpty()) {
                     for (String seguido : datos[3].split(",")) {
-                        restaurado.seguir(Integer.parseInt(seguido));
+                        int idSeguidoR = Integer.parseInt(seguido);
+                        restaurado.seguir(idSeguidoR);
+                        // Restaurar relación bidireccional: el seguido recupera al restaurado como seguidor
+                        Cliente seguidoCliente = clientes.obtener(idSeguidoR);
+                        if (seguidoCliente != null) seguidoCliente.agregarSeguidor(idRestaurar);
                     }
                 }
                 break;
             case SEGUIR:
-                Cliente c1 = clientes.obtener(Integer.parseInt(datos[0]));
-                if (c1 != null) c1.dejarDeSeguir(Integer.parseInt(datos[1]));
+                int idSeguidor = Integer.parseInt(datos[0]);
+                int idSeguido = Integer.parseInt(datos[1]);
+                Cliente cSeguidor = clientes.obtener(idSeguidor);
+                Cliente cSeguido = clientes.obtener(idSeguido);
+                if (cSeguidor != null) cSeguidor.dejarDeSeguir(idSeguido);
+                if (cSeguido != null) cSeguido.eliminarSeguidor(idSeguidor);
                 break;
             case DEJAR_DE_SEGUIR:
-                Cliente c2 = clientes.obtener(Integer.parseInt(datos[0]));
-                if (c2 != null) c2.seguir(Integer.parseInt(datos[1]));
+                int idExSeguidor = Integer.parseInt(datos[0]);
+                int idExSeguido = Integer.parseInt(datos[1]);
+                Cliente cExSeguidor = clientes.obtener(idExSeguidor);
+                Cliente cExSeguido = clientes.obtener(idExSeguido);
+                if (cExSeguidor != null) cExSeguidor.seguir(idExSeguido);
+                if (cExSeguido != null) cExSeguido.agregarSeguidor(idExSeguidor);
                 break;
             default:
                 break;
