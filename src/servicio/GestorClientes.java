@@ -31,6 +31,7 @@ public class GestorClientes {
     // Esta clase una un diccionario como TDA, donde la clave es el id del cliente, y el valor es el cliente
     private Diccionario<Integer, Cliente> clientes;  // Índice primario por ID
     private tda.ArbolBinarioBusqueda<Integer, Cliente> indiceScoring;  // Índice secundario por scoring
+    private Diccionario<String, tda.Cola<Cliente>> indiceNombre;  // Índice secundario por nombre O(1)
     private boolean registrarEnHistorial;
     private int proximoId;
     private final String archivoPath;
@@ -51,6 +52,7 @@ public class GestorClientes {
         this.registrarEnHistorial = true;
         this.proximoId = 1001;
         this.indiceScoring = new tda.ArbolBinarioBusqueda<>();  // Inicializar índice secundario
+        this.indiceNombre = new Diccionario<>(1000003);  // Inicializar índice por nombre
         cargarDesdeArchivo();
     }
     
@@ -87,12 +89,14 @@ public class GestorClientes {
                     
                     clientes.insertar(c.getId(), c);
                     indiceScoring.insertar(c.getScoring(), c);  // Insertar en índice secundario
+                    agregarAlIndiceNombre(c);  // Insertar en índice por nombre
                     if(c.getId() >= proximoId) proximoId = c.getId() + 1;
                 }
             }
         } catch (IOException e) {
             System.err.println("Error cargando datos (iniciando vacío): " + e.getMessage());
             this.clientes = new Diccionario<>(1000003);
+            this.indiceNombre = new Diccionario<>(1000003);
         }
     }
 
@@ -142,6 +146,45 @@ public class GestorClientes {
         ClienteDTO[] clientes;
     }
     
+    /*
+    Agrega un cliente al índice secundario por nombre.
+    Clave: nombre normalizado (lowercase). Valor: Cola de clientes con ese nombre.
+    Complejidad: O(1) amortizado.
+    */
+    private void agregarAlIndiceNombre(Cliente cliente) {
+        String clave = cliente.getNombre().toLowerCase();
+        tda.Cola<Cliente> cola = indiceNombre.obtener(clave);
+        if (cola == null) {
+            cola = new tda.Cola<>();
+            indiceNombre.insertar(clave, cola);
+        }
+        cola.encolar(cliente);
+    }
+
+    /*
+    Elimina un cliente del índice secundario por nombre.
+    Reconstruye la cola sin el cliente eliminado.
+    Complejidad: O(k) donde k = clientes con el mismo nombre.
+    */
+    private void eliminarDelIndiceNombre(Cliente cliente) {
+        String clave = cliente.getNombre().toLowerCase();
+        tda.Cola<Cliente> cola = indiceNombre.obtener(clave);
+        if (cola == null) return;
+
+        tda.Cola<Cliente> nueva = new tda.Cola<>();
+        while (!cola.estaVacia()) {
+            Cliente c = cola.desencolar();
+            if (c.getId() != cliente.getId()) {
+                nueva.encolar(c);
+            }
+        }
+        if (nueva.estaVacia()) {
+            indiceNombre.eliminar(clave);
+        } else {
+            indiceNombre.insertar(clave, nueva);
+        }
+    }
+
     public void activarHistorial() {
         this.registrarEnHistorial = true;
     }
@@ -173,7 +216,8 @@ public class GestorClientes {
         Cliente cliente = new Cliente(id, nombre, scoring);
         clientes.insertar(id, cliente);
         indiceScoring.insertar(scoring, cliente);  // Insertar en índice secundario
-        
+        agregarAlIndiceNombre(cliente);  // Insertar en índice por nombre
+
         if (registrarEnHistorial && sesionValida()) {
             Accion accion = new Accion(TipoAccion.AGREGAR_CLIENTE, String.valueOf(id));
             getSesion().getHistorial().registrar(accion);
@@ -199,7 +243,8 @@ public class GestorClientes {
         Cliente cliente = new Cliente(id, nombre, scoring);
         clientes.insertar(id, cliente);
         indiceScoring.insertar(scoring, cliente);  // Insertar en índice secundario
-        
+        agregarAlIndiceNombre(cliente);  // Insertar en índice por nombre
+
         if (id >= proximoId) {
             proximoId = id + 1;
         }
@@ -214,30 +259,33 @@ public class GestorClientes {
     }
 
     /*
-    Busca clientes por nombre.
-    Retorna array con las coincidencias.
+    Busca clientes por nombre usando índice hash.
+    Complejidad: O(1) para el lookup + O(k) donde k = clientes con ese nombre.
+    Antes era O(n) recorriendo todos los clientes.
     */
     public Cliente[] buscarPorNombre(String nombre) {
         if (nombre == null) return new Cliente[0];
-        
-        Object[] todosLosClientes = clientes.obtenerValores();
-        String nombreNormalizado = nombre.toLowerCase();
-        
-        int count = 0;
-        for (Object obj : todosLosClientes) {
-            Cliente c = (Cliente) obj;
-            if (c.getNombre().toLowerCase().equals(nombreNormalizado)) {
-                count++;
-            }
+
+        String clave = nombre.toLowerCase();
+        tda.Cola<Cliente> cola = indiceNombre.obtener(clave);
+
+        if (cola == null || cola.estaVacia()) {
+            return new Cliente[0];
         }
 
-        Cliente[] resultado = new Cliente[count];
-        int index = 0;
-        for (Object obj : todosLosClientes) {
-            Cliente c = (Cliente) obj;
-            if (c.getNombre().toLowerCase().equals(nombreNormalizado)) {
-                resultado[index++] = c;
-            }
+        // Copiar la cola a un array sin modificarla
+        int cantidad = cola.getCantidad();
+        Cliente[] resultado = new Cliente[cantidad];
+        tda.Cola<Cliente> aux = new tda.Cola<>();
+        int i = 0;
+        while (!cola.estaVacia()) {
+            Cliente c = cola.desencolar();
+            resultado[i++] = c;
+            aux.encolar(c);
+        }
+        // Restaurar la cola original
+        while (!aux.estaVacia()) {
+            cola.encolar(aux.desencolar());
         }
         return resultado;
     }
@@ -358,7 +406,8 @@ public class GestorClientes {
 
         clientes.eliminar(id);
         indiceScoring.eliminar(cliente.getScoring(), cliente);  // Eliminar de índice secundario
-        
+        eliminarDelIndiceNombre(cliente);  // Eliminar de índice por nombre
+
         // Limpiar referencias en cascada
         Object[] todosLosClientes = clientes.obtenerValores();
         for (Object obj : todosLosClientes) {
@@ -479,12 +528,14 @@ public class GestorClientes {
                 Cliente cEliminar = clientes.obtener(idEliminar);
                 if (cEliminar != null) {
                     clientes.eliminar(idEliminar);
+                    eliminarDelIndiceNombre(cEliminar);
                 }
                 break;
             case ELIMINAR_CLIENTE:
                 int idRestaurar = Integer.parseInt(datos[0]);
                 Cliente restaurado = new Cliente(idRestaurar, datos[1], Integer.parseInt(datos[2]));
                 clientes.insertar(idRestaurar, restaurado);
+                agregarAlIndiceNombre(restaurado);
                 if (datos.length > 3 && !datos[3].isEmpty()) {
                     for (String seguido : datos[3].split(",")) {
                         restaurado.seguir(Integer.parseInt(seguido));
