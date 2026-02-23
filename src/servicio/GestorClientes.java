@@ -635,10 +635,33 @@ public class GestorClientes {
 
     /**
      * Agrega un cliente al índice secundario por nombre.
-     * Complejidad: O(1) amortizado
+     * Indexa por nombre completo y por cada parte individual (nombre, apellido).
+     * Esto permite buscar por "Victoria", "Navarro" o "Victoria Navarro".
+     *
+     * Complejidad: O(p) amortizado donde p = cantidad de partes del nombre
      */
     private void agregarAlIndiceNombre(Cliente cliente) {
-        String clave = cliente.getNombre().toLowerCase();
+        String nombreCompleto = cliente.getNombre().toLowerCase();
+
+        // Indexar por nombre completo
+        agregarAlIndiceNombreClave(nombreCompleto, cliente);
+
+        // Indexar por cada parte individual del nombre (nombre, apellido, etc.)
+        String[] partes = nombreCompleto.split("\\s+");
+        if (partes.length > 1) {
+            for (String parte : partes) {
+                if (!parte.isEmpty()) {
+                    agregarAlIndiceNombreClave(parte, cliente);
+                }
+            }
+        }
+    }
+
+    /**
+     * Agrega un cliente a una clave específica del índice de nombre.
+     * Complejidad: O(1) amortizado
+     */
+    private void agregarAlIndiceNombreClave(String clave, Cliente cliente) {
         Cola<Cliente> cola = indiceNombre.obtener(clave);
         if (cola == null) {
             cola = new Cola<>();
@@ -649,10 +672,32 @@ public class GestorClientes {
 
     /**
      * Elimina un cliente del índice secundario por nombre.
-     * Complejidad: O(k) donde k = clientes con ese nombre
+     * Limpia todas las claves asociadas (nombre completo + partes individuales).
+     *
+     * Complejidad: O(p * k) donde p = partes del nombre, k = clientes por clave
      */
     private void eliminarDelIndiceNombre(Cliente cliente) {
-        String clave = cliente.getNombre().toLowerCase();
+        String nombreCompleto = cliente.getNombre().toLowerCase();
+
+        // Eliminar del índice por nombre completo
+        eliminarDelIndiceNombreClave(nombreCompleto, cliente);
+
+        // Eliminar de cada parte individual
+        String[] partes = nombreCompleto.split("\\s+");
+        if (partes.length > 1) {
+            for (String parte : partes) {
+                if (!parte.isEmpty()) {
+                    eliminarDelIndiceNombreClave(parte, cliente);
+                }
+            }
+        }
+    }
+
+    /**
+     * Elimina un cliente de una clave específica del índice de nombre.
+     * Complejidad: O(k) donde k = clientes con esa clave
+     */
+    private void eliminarDelIndiceNombreClave(String clave, Cliente cliente) {
         Cola<Cliente> cola = indiceNombre.obtener(clave);
         if (cola == null) return;
 
