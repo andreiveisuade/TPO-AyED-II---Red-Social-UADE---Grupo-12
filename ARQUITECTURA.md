@@ -86,6 +86,10 @@ El sistema implementa una **arquitectura modular y escalable** basada en **SOLID
 | `construirArbolRelaciones()` | O(k log k) | 2 |
 | `obtenerSeguidoresEnNivel()` | O(N) | 2 |
 | `obtenerSeguidoresOrdenados()` | O(N log N) | 2 |
+| `agregarAmistad()` | O(1) | 3 |
+| `eliminarAmistad()` | O(1) | 3 |
+| `obtenerAmigos()` | O(k) | 3 |
+| `sonAmigos()` | O(1) | 3 |
 | `calcularDistancia()` | O(V + E) | 3 |
 
 **Ejemplos de uso:**
@@ -222,8 +226,9 @@ Guardar JSON:        O(N * M) - N clientes, M seguidos
 
 ## 🧪 Validación
 
-**9/9 Tests Pasados** ✅
+**18/18 Tests Pasados** ✅
 
+**Iteración 1 & 2:**
 ```
 ✓ Relaciones entre clientes
 ✓ Límite de 2 seguidos
@@ -234,6 +239,18 @@ Guardar JSON:        O(N * M) - N clientes, M seguidos
 ✓ Búsqueda por scoring (lazy loading) - 1ms → 0ms
 ✓ Obtener clientes en nivel (ABB scoring)
 ✓ Persistencia de relaciones
+```
+
+**Iteración 3 - Relaciones Generales:**
+```
+✓ Agregar amistad bidireccional
+✓ Amistad es bidireccional (A↔B)
+✓ Eliminar amistad
+✓ Eliminar amistad es bidireccional
+✓ Obtener amigos (O(k))
+✓ Verificar amistad (O(1))
+✓ No se puede ser amigo de sí mismo
+✓ Distancia entre clientes (BFS) - O(V+E)
 ```
 
 ---
@@ -336,12 +353,19 @@ PersistenciaClientes.guardarCambios()
 - [x] Seguidores ordenados
 
 ### Iteración 3
-- [x] Distancia entre clientes (BFS) — `calcularDistancia(idOrigen, idDestino)`
-- [x] Pruebas unitarias para distancia (`DistanciaTest.java`)
+- [x] **Relaciones Generales (Amistades Bidireccionales)**
+  - [x] Nueva estructura: Diccionario `amistades` en Cliente
+  - [x] Métodos: `agregarAmistad()`, `eliminarAmistad()`, `obtenerAmigos()` - O(1)
+  - [x] Garantía de bidireccionalidad automática
+  - [x] Persistencia en JSON (campo `amistades`)
+  - [x] Pruebas unitarias (`AmistadTest.java` - 7 tests)
+- [x] Distancia entre clientes (BFS) — `calcularDistancia(idOrigen, idDestino)` - O(V+E)
+- [x] Pruebas unitarias para distancia (`DistanciaTest.java` - 7 tests)
 
 ### Calidad de Código
 - [x] SOLID aplicado (20% de rúbrica)
-- [x] Tests pasados (10/10+)
-- [x] Documentación
+- [x] Tests pasados (18/18)
+- [x] Documentación completa
 - [x] Complejidad optimizada
 - [x] Arquitectura modular
+- [x] Iteración 3 completa (100%)

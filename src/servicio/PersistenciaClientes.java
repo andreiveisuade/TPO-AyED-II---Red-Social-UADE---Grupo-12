@@ -71,6 +71,11 @@ public class PersistenciaClientes {
                         c.cargarSeguidores(idsSeguidores);
                     }
 
+                    // Cargar amistades (Iteración 3 - puede ser null en versiones antiguas)
+                    if (dto.amistades != null) {
+                        c.cargarAmistades(dto.amistades);
+                    }
+
                     clientes.insertar(c.getId(), c);
                 }
             }
@@ -106,6 +111,7 @@ public class PersistenciaClientes {
                 dto.siguiendo = c.getSiguiendo();
                 dto.solicitudes = c.getSolicitudesRecibidasSerialized();
                 dto.seguidores = c.getSeguidoresSerialized();
+                dto.amistades = c.getAmistadesSerialized();  // Iteración 3
                 wrapper.clientes[i] = dto;
             }
 
@@ -127,6 +133,7 @@ public class PersistenciaClientes {
         public int[] siguiendo;
         public String[] solicitudes;
         public String[] seguidores;
+        public int[] amistades;  // Iteración 3: Relaciones generales
     }
 
     /**

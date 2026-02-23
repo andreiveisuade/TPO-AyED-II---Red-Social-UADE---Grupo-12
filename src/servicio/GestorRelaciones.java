@@ -306,4 +306,119 @@ public class GestorRelaciones {
         // No se encontró camino
         return -1;
     }
+
+    // ════════════════════════════════════════════════════════════════════════════════════
+    // RELACIONES GENERALES (AMISTADES - ITERACIÓN 3)
+    // ════════════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Agrega una amistad bidireccional entre dos clientes.
+     * Si A se hace amigo de B, entonces B automáticamente se hace amigo de A.
+     *
+     * Complejidad: O(1) amortizado
+     *
+     * @param idCliente1 ID del primer cliente
+     * @param idCliente2 ID del segundo cliente
+     * @return true si se estableció la amistad, false si falló
+     */
+    public boolean agregarAmistad(int idCliente1, int idCliente2) {
+        Cliente cliente1 = clientes.obtener(idCliente1);
+        Cliente cliente2 = clientes.obtener(idCliente2);
+
+        if (cliente1 == null || cliente2 == null) {
+            return false;
+        }
+
+        if (cliente1.agregarAmistad(idCliente2)) {
+            cliente2.agregarAmistad(idCliente1);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Elimina una amistad bidireccional entre dos clientes.
+     * Si se rompe la amistad entre A y B, se rompe en ambos lados.
+     *
+     * Complejidad: O(1) amortizado
+     *
+     * @param idCliente1 ID del primer cliente
+     * @param idCliente2 ID del segundo cliente
+     * @return true si se eliminó la amistad, false si falló
+     */
+    public boolean eliminarAmistad(int idCliente1, int idCliente2) {
+        Cliente cliente1 = clientes.obtener(idCliente1);
+        Cliente cliente2 = clientes.obtener(idCliente2);
+
+        if (cliente1 == null || cliente2 == null) {
+            return false;
+        }
+
+        if (cliente1.eliminarAmistad(idCliente2)) {
+            cliente2.eliminarAmistad(idCliente1);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Obtiene todos los amigos de un cliente.
+     *
+     * Complejidad: O(k) donde k = cantidad de amigos
+     *
+     * @param idCliente ID del cliente
+     * @return Array de clientes amigos
+     */
+    public Cliente[] obtenerAmigos(int idCliente) {
+        Cliente cliente = clientes.obtener(idCliente);
+        if (cliente == null) return new Cliente[0];
+
+        int[] idsAmigos = cliente.obtenerAmigos();
+        Cliente[] amigos = new Cliente[idsAmigos.length];
+        int count = 0;
+
+        for (int idAmigo : idsAmigos) {
+            Cliente amigo = clientes.obtener(idAmigo);
+            if (amigo != null) {
+                amigos[count++] = amigo;
+            }
+        }
+
+        // Redimensionar array si es necesario
+        if (count < amigos.length) {
+            Cliente[] resultado = new Cliente[count];
+            System.arraycopy(amigos, 0, resultado, 0, count);
+            return resultado;
+        }
+        return amigos;
+    }
+
+    /**
+     * Obtiene la cantidad de amigos de un cliente.
+     *
+     * Complejidad: O(1)
+     *
+     * @param idCliente ID del cliente
+     * @return Cantidad de amigos
+     */
+    public int obtenerCantidadAmigos(int idCliente) {
+        Cliente cliente = clientes.obtener(idCliente);
+        if (cliente == null) return 0;
+        return cliente.getCantidadAmigos();
+    }
+
+    /**
+     * Verifica si dos clientes son amigos.
+     *
+     * Complejidad: O(1)
+     *
+     * @param idCliente1 ID del primer cliente
+     * @param idCliente2 ID del segundo cliente
+     * @return true si son amigos, false en caso contrario
+     */
+    public boolean sonAmigos(int idCliente1, int idCliente2) {
+        Cliente cliente = clientes.obtener(idCliente1);
+        if (cliente == null) return false;
+        return cliente.esAmigoDE(idCliente2);
+    }
 }

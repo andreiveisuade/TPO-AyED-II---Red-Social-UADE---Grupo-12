@@ -508,6 +508,50 @@ public class GestorClientes {
     }
 
     // ════════════════════════════════════════════════════════════════════════════════════
+    // RELACIONES GENERALES - AMISTADES (ITERACIÓN 3)
+    // ════════════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Establece una amistad bidireccional entre dos clientes.
+     * Complejidad: O(1)
+     */
+    public boolean agregarAmistad(int idCliente1, int idCliente2) {
+        return gestorRelaciones.agregarAmistad(idCliente1, idCliente2);
+    }
+
+    /**
+     * Elimina una amistad bidireccional entre dos clientes.
+     * Complejidad: O(1)
+     */
+    public boolean eliminarAmistad(int idCliente1, int idCliente2) {
+        return gestorRelaciones.eliminarAmistad(idCliente1, idCliente2);
+    }
+
+    /**
+     * Obtiene todos los amigos de un cliente.
+     * Complejidad: O(k) donde k = cantidad de amigos
+     */
+    public Cliente[] obtenerAmigos(int idCliente) {
+        return gestorRelaciones.obtenerAmigos(idCliente);
+    }
+
+    /**
+     * Obtiene la cantidad de amigos de un cliente.
+     * Complejidad: O(1)
+     */
+    public int obtenerCantidadAmigos(int idCliente) {
+        return gestorRelaciones.obtenerCantidadAmigos(idCliente);
+    }
+
+    /**
+     * Verifica si dos clientes son amigos.
+     * Complejidad: O(1)
+     */
+    public boolean sonAmigos(int idCliente1, int idCliente2) {
+        return gestorRelaciones.sonAmigos(idCliente1, idCliente2);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════════════
     // UNDO/REDO (Historial de Acciones)
     // ════════════════════════════════════════════════════════════════════════════════════
 

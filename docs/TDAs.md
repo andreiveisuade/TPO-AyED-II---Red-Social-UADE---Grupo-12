@@ -56,9 +56,9 @@ El sistema instancia esta estructura de dos formas críticas:
 *   **Ventaja**: Búsqueda por nombre en **O(1)** en lugar de O(N) secuencial.
 
 #### C. Grafo de Relaciones (`Cliente`)
-*   **Instancia**: `Diccionario<Integer, Boolean> siguiendo` y `Diccionario<Integer, Boolean> seguidores`.
-*   **Uso**: Representa las aristas salientes y entrantes del grafo social (bidireccional).
-*   **Ventaja**: Permite verificar si "Usuario A sigue a Usuario B" (`sigueA(id)`) en **O(1)**.
+*   **Instancia**: `Diccionario<Integer, Boolean> siguiendo`, `Diccionario<Integer, Boolean> seguidores`, y `Diccionario<Integer, Boolean> amistades` (Iteración 3).
+*   **Uso**: Representa las aristas del grafo social. "Siguiendo/Seguidores" son dirigidas (Iteraciones 1-2). "Amistades" son bidireccionales (Iteración 3).
+*   **Ventaja**: Permite verificar si "Usuario A sigue a Usuario B" o si "Son amigos" en **O(1)**.
 
 ---
 

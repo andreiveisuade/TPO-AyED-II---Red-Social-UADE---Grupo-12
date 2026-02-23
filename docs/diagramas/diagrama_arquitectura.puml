@@ -7,7 +7,7 @@ skinparam packageBorderColor #555
 skinparam packageFontSize 14
 skinparam packageFontStyle bold
 
-title **Diagrama de Arquitectura - Red Social UADE**\nArquitectura en Capas (Singleton + Lazy Loading)
+title **Diagrama de Arquitectura - Red Social UADE**\nArquitectura Modular (3 Iteraciones Completas)
 
 ' ==========================================
 ' CAPA DE PRESENTACIÓN (VISTA)
@@ -24,8 +24,10 @@ package "Capa Vista" as vista #E3F2FD {
 ' CAPA DE LÓGICA DE NEGOCIO (SERVICIOS)
 ' ==========================================
 package "Capa Servicio" as servicio #E8F5E9 {
-    component [GestorClientes\n<font size="10">Lógica de Clientes</font>\n<font size="9" color="gray">CRUD + Seguimiento</font>] as gestor #A5D6A7
-    component [HistorialAcciones\n<font size="10">Wrapper de Pila</font>] as historialAcciones #A5D6A7
+    component [GestorClientes\n<font size="10">Coordinador Central</font>\n<font size="9" color="gray">CRUD + Índices + Búsquedas</font>] as gestor #A5D6A7
+    component [GestorRelaciones\n<font size="10">Especialista Relaciones</font>\n<font size="9" color="gray">Seguimientos + Amistades + Distancia</font>] as gestorRel #A5D6A7
+    component [PersistenciaClientes\n<font size="10">I/O JSON</font>\n<font size="9" color="gray">Carga/Guardado</font>] as persistencia #A5D6A7
+    component [HistorialAcciones\n<font size="10">Undo/Redo</font>] as historialAcciones #A5D6A7
 }
 
 ' ==========================================
@@ -75,10 +77,16 @@ menuSolicitudes ..> sesion : "Sesion.getInstancia()"
 menuHistorial --> gestor : undo/redo
 menuHistorial ..> sesion : "Sesion.getInstancia()"
 
-' Servicio usa Singleton
+' Coordinación entre servicios
+gestor --> gestorRel : delega relaciones
+gestor --> persistencia : delega I/O
+gestor --> historialAcciones : delega historial
 gestor ..> sesion : "Sesion.getInstancia()\npara undo/redo"
+
+' Creación de entidades
 gestor --> cliente : crea/gestiona
 gestor --> accion : crea para registrar
+gestorRel --> cliente : referencia
 
 ' Modelo interno
 sesion --> cliente : "usuarioActual"
@@ -88,11 +96,14 @@ cliente --> cola : "solicitudesPendientes"
 accion --> tipoAccion : tipo
 
 ' Servicio → TDA
-gestor --> diccionario : "clientes<ID, Cliente>"
+gestor --> diccionario : "clientes<ID>\nindices<Nombre>\nindices<Scoring>"
+gestorRel --> diccionario : "relaciones"
 historialAcciones --> pila : "Pila<Accion>"
+cliente --> cola : "solicitudes"
 
-' Persistencia (Simulada Directa)
-gestor --> jsonFile : "Lee al inicio\nEscribe al salir"
+' Persistencia
+persistencia --> jsonFile : "Lee/Escribe JSON"
+gestor --> persistencia : usa
 
 ' ==========================================
 ' NOTAS
@@ -105,11 +116,11 @@ note right of sesion
     sin pasarla como parámetro.
 end note
 
-note right of menuSolicitudes
-    <b>Menú Unificado:</b>
-    1. Mis Amigos (siguiendo)
-    2. Solicitudes (pendientes)
-    3. Explorar (buscar/listar)
+note right of gestorRel
+    <b>Iteración 3:</b>
+    • Amistades bidireccionales
+    • Distancia BFS O(V+E)
+    • Búsqueda eficiente
 end note
 
 legend bottom
