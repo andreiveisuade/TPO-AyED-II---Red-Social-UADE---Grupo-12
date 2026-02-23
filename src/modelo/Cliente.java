@@ -34,6 +34,11 @@ public class Cliente {
     private tda.Diccionario<Integer, Boolean> seguidores;  // Diccionario de usuarios que lo siguen
     private Cola<SolicitudSeguimiento> solicitudesPendientes;  // Cola de solicitudes recibidas
 
+    // Cache de arrays para evitar reparsear claves del Diccionario en cada llamada.
+    // null = invalidado, se reconstruye en el próximo get.
+    private int[] cacheSiguiendo;
+    private int[] cacheSeguidores;
+
     /*
     Constructor que inicializa un cliente con ID, nombre y scoring.
     Valida las precondiciones.
@@ -86,20 +91,14 @@ public class Cliente {
 
     /*
     Retorna los IDs de los usuarios seguidos.
+    Usa cache interno; se invalida al modificar la relación.
+    Complejidad: O(1) si cache válido, O(k) si necesita reconstruir.
     */
     public int[] getSiguiendo() {
-        String[] claves = siguiendo.obtenerClaves();
-        int[] ids = new int[claves.length];
-        for (int i = 0; i < claves.length; i++) {
-            if (claves[i] != null) {
-                try {
-                    ids[i] = Integer.parseInt(claves[i]);
-                } catch (NumberFormatException e) {
-                    ids[i] = 0; // Should not happen with Integer keys
-                }
-            }
+        if (cacheSiguiendo == null) {
+            cacheSiguiendo = parsearClaves(siguiendo);
         }
-        return ids;
+        return cacheSiguiendo;
     }
     
     // Método auxiliar para compatibilidad si alguien necesita el diccionario direct (opcional)
@@ -114,20 +113,14 @@ public class Cliente {
 
     /*
     Retorna los IDs de los usuarios que siguen a este cliente (seguidores).
+    Usa cache interno; se invalida al modificar seguidores.
+    Complejidad: O(1) si cache válido, O(k) si necesita reconstruir.
     */
     public int[] getSeguidores() {
-        String[] claves = seguidores.obtenerClaves();
-        int[] ids = new int[claves.length];
-        for (int i = 0; i < claves.length; i++) {
-            if (claves[i] != null) {
-                try {
-                    ids[i] = Integer.parseInt(claves[i]);
-                } catch (NumberFormatException e) {
-                    ids[i] = 0;
-                }
-            }
+        if (cacheSeguidores == null) {
+            cacheSeguidores = parsearClaves(seguidores);
         }
-        return ids;
+        return cacheSeguidores;
     }
 
     /*
@@ -143,6 +136,7 @@ public class Cliente {
     */
     public void agregarSeguidor(int idSeguidor) {
         seguidores.insertar(idSeguidor, true);
+        cacheSeguidores = null;
     }
 
     /*
@@ -151,6 +145,7 @@ public class Cliente {
     */
     public void eliminarSeguidor(int idSeguidor) {
         seguidores.eliminar(idSeguidor);
+        cacheSeguidores = null;
     }
 
     /*
@@ -168,6 +163,7 @@ public class Cliente {
             return false;
         }
         siguiendo.insertar(idObjetivo, true);
+        cacheSiguiendo = null;
         return true;
     }
 
@@ -177,6 +173,7 @@ public class Cliente {
     public boolean dejarDeSeguir(int idObjetivo) {
         if (siguiendo.contiene(idObjetivo)) {
             siguiendo.eliminar(idObjetivo);
+            cacheSiguiendo = null;
             return true;
         }
         return false;
@@ -314,6 +311,7 @@ public class Cliente {
                 this.siguiendo.insertar(idObjetivo, true);
             }
         }
+        cacheSiguiendo = null;
     }
 
     /*
@@ -356,6 +354,27 @@ public class Cliente {
         for (int idSeguidor : ids) {
             this.seguidores.insertar(idSeguidor, true);
         }
+        cacheSeguidores = null;
+    }
+
+    /*
+    Convierte las claves de un Diccionario<Integer, Boolean> a int[].
+    Helper privado para construir el cache de getSiguiendo()/getSeguidores().
+    Complejidad: O(k) donde k = cantidad de claves.
+    */
+    private int[] parsearClaves(tda.Diccionario<Integer, Boolean> diccionario) {
+        String[] claves = diccionario.obtenerClaves();
+        int[] ids = new int[claves.length];
+        for (int i = 0; i < claves.length; i++) {
+            if (claves[i] != null) {
+                try {
+                    ids[i] = Integer.parseInt(claves[i]);
+                } catch (NumberFormatException e) {
+                    ids[i] = 0;
+                }
+            }
+        }
+        return ids;
     }
 }
 

@@ -114,24 +114,6 @@ public class MenuHistorial {
         String descripcion = "";
 
         switch (tipoAccion) {
-            case "AGREGAR_CLIENTE":
-                // datos: [id, nombre, scoring]
-                if (datos.length >= 3) {
-                    descripcion = "AGREGAR_CLIENTE: @" + datos[1] + " (ID: " + datos[0] + ", Influencia: " + datos[2] + ")";
-                } else {
-                    descripcion = tipoAccion + ": " + String.join(", ", datos);
-                }
-                break;
-
-            case "ELIMINAR_CLIENTE":
-                // datos: [id, nombre, scoring]
-                if (datos.length >= 3) {
-                    descripcion = "ELIMINAR_CLIENTE: @" + datos[1] + " (ID: " + datos[0] + ", Influencia: " + datos[2] + ")";
-                } else {
-                    descripcion = tipoAccion + ": " + String.join(", ", datos);
-                }
-                break;
-
             case "SEGUIR":
                 // datos: [idSeguidor, idSeguido]
                 if (datos.length >= 2) {
@@ -158,25 +140,6 @@ public class MenuHistorial {
                         String nomSeguidor = (seguidor != null) ? "@" + seguidor.getNombre() : "ID:" + datos[0];
                         String nomSeguido = (seguido != null) ? "@" + seguido.getNombre() : "ID:" + datos[1];
                         descripcion = "DEJAR_DE_SEGUIR: " + nomSeguidor + " ✕ " + nomSeguido;
-                    } catch (Exception e) {
-                        descripcion = tipoAccion + ": " + String.join(", ", datos);
-                    }
-                } else {
-                    descripcion = tipoAccion + ": " + String.join(", ", datos);
-                }
-                break;
-
-            case "AGREGAR_CONEXION":
-            case "ELIMINAR_CONEXION":
-                // datos: [idA, idB]
-                if (datos.length >= 2) {
-                    try {
-                        Cliente clienteA = gestor.buscarPorId(Integer.parseInt(datos[0]));
-                        Cliente clienteB = gestor.buscarPorId(Integer.parseInt(datos[1]));
-                        String nomA = (clienteA != null) ? "@" + clienteA.getNombre() : "ID:" + datos[0];
-                        String nomB = (clienteB != null) ? "@" + clienteB.getNombre() : "ID:" + datos[1];
-                        String operador = tipoAccion.equals("AGREGAR_CONEXION") ? "↔" : "✕";
-                        descripcion = tipoAccion + ": " + nomA + " " + operador + " " + nomB;
                     } catch (Exception e) {
                         descripcion = tipoAccion + ": " + String.join(", ", datos);
                     }

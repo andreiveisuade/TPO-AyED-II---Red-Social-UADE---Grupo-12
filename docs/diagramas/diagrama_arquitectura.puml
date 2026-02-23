@@ -24,7 +24,8 @@ package "Capa Vista" as vista #E3F2FD {
 ' CAPA DE LÓGICA DE NEGOCIO (SERVICIOS)
 ' ==========================================
 package "Capa Servicio" as servicio #E8F5E9 {
-    component [GestorClientes\n<font size="10">Lógica de Clientes</font>\n<font size="9" color="gray">CRUD + Seguimiento</font>] as gestor #A5D6A7
+    component [GestorClientes\n<font size="10">Coordinador Central</font>\n<font size="9" color="gray">CRUD + Undo/Redo</font>] as gestor #A5D6A7
+    component [IndiceClientes\n<font size="10">Índices Secundarios</font>\n<font size="9" color="gray">Nombre + Scoring</font>] as indiceClientes #A5D6A7
     component [HistorialAcciones\n<font size="10">Wrapper de Pila</font>] as historialAcciones #A5D6A7
 }
 
@@ -44,6 +45,7 @@ package "Capa Modelo" as modelo #FFF3E0 {
 ' ==========================================
 package "Capa TDA" as tda #F3E5F5 {
     component [Diccionario<K,V>\n<font size="10">Hash Table O(1)</font>] as diccionario #CE93D8
+    component [ABB<K,V>\n<font size="10">BST O(log 101+k)</font>\n<font size="9" color="gray">Cola por nodo, máx 101</font>] as abb #CE93D8
     component [Pila<T>\n<font size="10">LIFO Stack O(1)</font>] as pila #CE93D8
     component [Cola<T>\n<font size="10">FIFO Queue O(1)</font>] as cola #CE93D8
 }
@@ -86,6 +88,11 @@ sesion --> historialAcciones : "historial de sesión"
 cliente --> solicitud : "cola interna"
 cliente --> cola : "solicitudesPendientes"
 accion --> tipoAccion : tipo
+
+' Servicio → IndiceClientes
+gestor --> indiceClientes : "delega búsquedas"
+indiceClientes --> diccionario : "indiceNombre<String, Cola>"
+indiceClientes --> abb : "indiceScoring<Int, Cola>"
 
 ' Servicio → TDA
 gestor --> diccionario : "clientes<ID, Cliente>"

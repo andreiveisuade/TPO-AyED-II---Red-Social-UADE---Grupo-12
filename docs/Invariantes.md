@@ -84,12 +84,14 @@ Este documento define formalmente las condiciones lógicas que garantizan la int
 
 ### 3.1. `GestorClientes`
 *   `clientes` no es nulo (Diccionario principal por ID).
-*   `indiceScoring` no es nulo (ABB secundario por scoring).
+*   `indiceScoring` no es nulo (ABB<Integer, Cola<Cliente>> secundario por scoring, máx 101 nodos).
 *   `indiceNombre` no es nulo (Diccionario secundario por nombre).
+*   `scoringIndexConstructed` indica si el índice de scoring fue construido (lazy loading).
 *   `proximoId` siempre es mayor que el mayor ID existente en el sistema.
 *   Para todo `Cliente c` en `clientes`, `c.id` corresponde a su clave en el diccionario.
-*   **Sincronización de índices**: Todo cliente en `clientes` debe existir también en `indiceScoring` (bajo su scoring) y en `indiceNombre` (bajo su nombre en lowercase).
+*   **Sincronización de índices**: Si `scoringIndexConstructed == true`, todo cliente en `clientes` debe existir también en la `Cola` correspondiente del nodo ABB con su scoring. Todo cliente debe existir en `indiceNombre` (bajo su nombre en lowercase).
 *   **Consistencia inversa**: Todo cliente referenciado en `indiceScoring` o `indiceNombre` debe existir en `clientes`.
+*   **Unicidad de nodos ABB**: Cada scoring (0-100) tiene a lo sumo un nodo en el ABB; la Cola del nodo contiene todos los clientes con ese scoring.
 
 ---
 

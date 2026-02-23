@@ -24,7 +24,7 @@ public class HistorialAccionesTest {
 
     @Test
     void testRegistrarAccion() {
-        Accion accion = new Accion(TipoAccion.AGREGAR_CLIENTE, "Alice", "95");
+        Accion accion = new Accion(TipoAccion.SEGUIR, "Alice", "95");
         historial.registrar(accion);
         
         assertFalse(historial.estaVacio());
@@ -39,7 +39,7 @@ public class HistorialAccionesTest {
 
     @Test
     void testVerUltima() {
-        Accion accion1 = new Accion(TipoAccion.AGREGAR_CLIENTE, "Alice", "95");
+        Accion accion1 = new Accion(TipoAccion.SEGUIR, "Alice", "95");
         Accion accion2 = new Accion(TipoAccion.SEGUIR, "Alice", "Bob");
         
         historial.registrar(accion1);
@@ -57,7 +57,7 @@ public class HistorialAccionesTest {
 
     @Test
     void testExtraerUltima() {
-        Accion accion1 = new Accion(TipoAccion.AGREGAR_CLIENTE, "Alice", "95");
+        Accion accion1 = new Accion(TipoAccion.SEGUIR, "Alice", "95");
         Accion accion2 = new Accion(TipoAccion.SEGUIR, "Alice", "Bob");
         
         historial.registrar(accion1);
@@ -75,8 +75,8 @@ public class HistorialAccionesTest {
 
     @Test
     void testOrdenLIFO() {
-        historial.registrar(new Accion(TipoAccion.AGREGAR_CLIENTE, "Alice", "95"));
-        historial.registrar(new Accion(TipoAccion.AGREGAR_CLIENTE, "Bob", "88"));
+        historial.registrar(new Accion(TipoAccion.SEGUIR, "Alice", "95"));
+        historial.registrar(new Accion(TipoAccion.SEGUIR, "Bob", "88"));
         historial.registrar(new Accion(TipoAccion.SEGUIR, "Alice", "Bob"));
         
         assertEquals(TipoAccion.SEGUIR, historial.extraerUltima().getTipo());
@@ -87,8 +87,8 @@ public class HistorialAccionesTest {
 
     @Test
     void testObtenerTodas() {
-        historial.registrar(new Accion(TipoAccion.AGREGAR_CLIENTE, "Alice", "95"));
-        historial.registrar(new Accion(TipoAccion.AGREGAR_CLIENTE, "Bob", "88"));
+        historial.registrar(new Accion(TipoAccion.SEGUIR, "Alice", "95"));
+        historial.registrar(new Accion(TipoAccion.SEGUIR, "Bob", "88"));
         historial.registrar(new Accion(TipoAccion.SEGUIR, "Alice", "Bob"));
         
         Accion[] todas = historial.obtenerTodas();

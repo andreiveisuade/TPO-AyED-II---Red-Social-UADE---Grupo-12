@@ -48,6 +48,9 @@ class Cliente {
 ' ==========================================
 class GestorClientes {
     - clientes: Diccionario<Integer, Cliente>
+    - indiceScoring: ABB<Integer, Cola<Cliente>>
+    - indiceNombre: Diccionario<String, Cola<Cliente>>
+    - scoringIndexConstructed: boolean
     - proximoId: int
     __
     + agregarCliente(nombre: String, scoring: int): int
@@ -60,7 +63,6 @@ class GestorClientes {
     + seguir(idSol: int, idObj: int): boolean
     + dejarDeSeguir(idSol: int, idObj: int): boolean
     + deshacer(): Accion
-    + activarHistorial(): void
 }
 
 ' ==========================================

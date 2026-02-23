@@ -4,65 +4,54 @@ import modelo.Cliente;
 import modelo.Accion;
 import modelo.TipoAccion;
 import util.Validador;
+import util.NumerosPrimos;
 import modelo.Sesion;
 import util.ResultadoValidacion;
 import tda.Diccionario;
 import tda.ArbolBinarioBusqueda;
-import tda.Cola;
 
 /**
- * Gestión centralizada de clientes en la red social.
+ * Coordinador centralizado de operaciones sobre clientes en la red social.
  *
- * RESPONSABILIDAD PRINCIPAL: Coordinar operaciones CRUD de clientes y búsquedas.
- * Delega operaciones especializadas a servicios específicos.
+ * RESPONSABILIDAD: Coordinar CRUD, búsquedas y undo de clientes.
+ * Delega responsabilidades especializadas a servicios dedicados.
  *
  * ARQUITECTURA MODULAR:
  * ┌─────────────────────────────────────────────────┐
  * │          GestorClientes (Coordinador)           │
  * ├─────────────────────────────────────────────────┤
  * │ - CRUD de clientes                              │
- * │ - Búsquedas (ID, nombre, scoring)              │
- * │ - Gestiona índices                              │
- * │ - Delegación a servicios                         │
+ * │ - Undo de acciones                              │
+ * │ - Delegación a servicios especializados         │
  * └─────────────────────────────────────────────────┘
- *         ↓ delega                  ↓ delega
- *    GestorRelaciones          PersistenciaClientes
- *    (Relaciones)              (JSON I/O)
- *
- * INVARIANTES DE REPRESENTACIÓN:
- * - clientes != null
- * - Todos los IDs son > 0
- * - Todos los clientes tienen scoring entre 0 y 100
- * - Índices son consistentes con diccionario principal
+ *     ↓ delega          ↓ delega          ↓ delega
+ * IndiceClientes   GestorRelaciones  PersistenciaClientes
+ * (Búsquedas)      (Relaciones)      (JSON I/O)
  *
  * PRINCIPIOS SOLID:
- * - SRP: Solo coordina clientes y búsquedas
- * - DIP: Depende de abstracciones (Cliente)
+ * - SRP: Coordina CRUD y undo; delega índices, relaciones y persistencia
+ * - DIP: Depende de abstracciones (Cliente, servicios)
  *
  * PRINCIPIOS GRASP:
- * - Information Expert: Conoce el diccionario de clientes
+ * - Controller: Coordina acciones entre servicios
  * - Creator: Crea instancias de Cliente
- * - Controller: Coordina acciones sobre clientes
+ * - Indirection: Intermediario entre Vista y servicios especializados
  */
 public class GestorClientes {
 
-    // ÍNDICES PRIMARIOS Y SECUNDARIOS
+    // ÍNDICE PRIMARIO
     private Diccionario<Integer, Cliente> clientes;  // Índice primario por ID - O(1)
-    private tda.ArbolBinarioBusqueda<Integer, Cliente> indiceScoring;  // Índice secundario por scoring (lazy loading)
-    private boolean scoringIndexConstructed = false;  // Flag para lazy loading
-    private Diccionario<String, Cola<Cliente>> indiceNombre;  // Índice secundario por nombre - O(1)
 
     // SERVICIOS DELEGADOS
-    private GestorRelaciones gestorRelaciones;  // Gestión de relaciones entre clientes
-    private PersistenciaClientes persistencia;  // Persistencia en JSON
+    private IndiceClientes indices;                   // Índices secundarios (scoring + nombre)
+    private GestorRelaciones gestorRelaciones;        // Gestión de relaciones entre clientes
+    private PersistenciaClientes persistencia;        // Persistencia en JSON
 
     // ESTADO
-    private boolean registrarEnHistorial;
     private int proximoId;
 
     // CONSTANTES
     private static final String DEFAULT_PATH = "data/clientes_1M.json";
-    private static final int CAPACIDAD_DICCIONARIO = 1000003;
 
     // ════════════════════════════════════════════════════════════════════════════════════
     // CONSTRUCTOR
@@ -74,47 +63,28 @@ public class GestorClientes {
 
     /**
      * Constructor principal.
-     * Inicializa todos los índices y servicios, carga datos desde archivo.
+     * Inicializa servicios delegados y carga datos desde archivo.
      *
      * Complejidad: O(N) donde N = cantidad de clientes
      */
     public GestorClientes(String dbPath) {
-        this.registrarEnHistorial = true;
         this.proximoId = 1001;
-        this.indiceScoring = new ArbolBinarioBusqueda<>();
-        this.indiceNombre = new Diccionario<>(CAPACIDAD_DICCIONARIO);
 
-        // Inicializar servicios
+        // Cargar clientes desde persistencia (capacidad dinámica basada en datos reales)
         this.persistencia = new PersistenciaClientes(dbPath);
+        this.clientes = persistencia.cargarDesdeArchivo();
 
-        // Cargar clientes
-        this.clientes = persistencia.cargarDesdeArchivo(CAPACIDAD_DICCIONARIO);
-
-        // Construir índice de nombre (rápido - O(1) por cliente)
-        construirIndiceNombre();
+        // Inicializar servicios delegados (capacidad proporcional al dataset)
+        this.indices = new IndiceClientes(clientes, NumerosPrimos.capacidadOptima(clientes.getCantidad()));
+        this.gestorRelaciones = new GestorRelaciones(clientes);
 
         // Actualizar proximoId basado en clientes cargados
         actualizarProximoId();
-
-        // Inicializar gestor de relaciones
-        this.gestorRelaciones = new GestorRelaciones(clientes);
-    }
-
-    /**
-     * Construye el índice secundario de nombre.
-     * Complejidad: O(N) donde N = cantidad de clientes
-     */
-    private void construirIndiceNombre() {
-        Object[] valores = clientes.obtenerValores();
-        for (Object obj : valores) {
-            Cliente c = (Cliente) obj;
-            agregarAlIndiceNombre(c);
-        }
     }
 
     /**
      * Actualiza el próximo ID basado en clientes existentes.
-     * Complejidad: O(N) donde N = cantidad de clientes
+     * Complejidad: O(N)
      */
     private void actualizarProximoId() {
         Object[] valores = clientes.obtenerValores();
@@ -144,7 +114,6 @@ public class GestorClientes {
 
     /**
      * Agrega un nuevo cliente con ID autogenerado.
-     * Registra la acción en historial si está habilitado.
      *
      * Complejidad: O(1) amortizado
      *
@@ -160,12 +129,7 @@ public class GestorClientes {
         int id = proximoId++;
         Cliente cliente = new Cliente(id, nombre, scoring);
         clientes.insertar(id, cliente);
-        agregarAlIndiceNombre(cliente);
-
-        if (registrarEnHistorial && sesionValida()) {
-            Accion accion = new Accion(TipoAccion.AGREGAR_CLIENTE, String.valueOf(id));
-            getSesion().getHistorial().registrar(accion);
-        }
+        indices.agregarCliente(cliente);
 
         return id;
     }
@@ -190,7 +154,7 @@ public class GestorClientes {
 
         Cliente cliente = new Cliente(id, nombre, scoring);
         clientes.insertar(id, cliente);
-        agregarAlIndiceNombre(cliente);
+        indices.agregarCliente(cliente);
 
         if (id >= proximoId) {
             proximoId = id + 1;
@@ -208,33 +172,11 @@ public class GestorClientes {
 
     /**
      * Busca clientes por nombre usando índice hash.
+     * Delegado a IndiceClientes.
      * Complejidad: O(1) + O(k) donde k = clientes con ese nombre
      */
     public Cliente[] buscarPorNombre(String nombre) {
-        if (nombre == null) return new Cliente[0];
-
-        String clave = nombre.toLowerCase();
-        Cola<Cliente> cola = indiceNombre.obtener(clave);
-
-        if (cola == null || cola.estaVacia()) {
-            return new Cliente[0];
-        }
-
-        // Copiar la cola a un array sin modificarla
-        int cantidad = cola.getCantidad();
-        Cliente[] resultado = new Cliente[cantidad];
-        Cola<Cliente> aux = new Cola<>();
-        int i = 0;
-        while (!cola.estaVacia()) {
-            Cliente c = cola.desencolar();
-            resultado[i++] = c;
-            aux.encolar(c);
-        }
-        // Restaurar la cola original
-        while (!aux.estaVacia()) {
-            cola.encolar(aux.desencolar());
-        }
-        return resultado;
+        return indices.buscarPorNombre(nombre);
     }
 
     /**
@@ -267,125 +209,118 @@ public class GestorClientes {
     }
 
     // ════════════════════════════════════════════════════════════════════════════════════
-    // BÚSQUEDAS ESPECIALIZADAS
+    // BÚSQUEDAS ESPECIALIZADAS (Delegadas a IndiceClientes)
     // ════════════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Construye el índice de scoring bajo demanda (lazy loading).
-     * Se ejecuta una sola vez la primera vez que se necesita.
-     *
-     * Complejidad: O(N log N) amortizado en todas las búsquedas
-     */
-    private void construirIndiceScoringLazy() {
-        if (scoringIndexConstructed) return;
-
-        Object[] valores = clientes.obtenerValores();
-        for (Object obj : valores) {
-            Cliente c = (Cliente) obj;
-            indiceScoring.insertar(c.getScoring(), c);
-        }
-        scoringIndexConstructed = true;
-    }
-
-    /**
-     * Busca clientes por su scoring usando ABB con lazy loading.
-     * Complejidad: O(N log N) en primera llamada, O(log N + k) en siguientes
+     * Busca clientes por scoring usando ABB con lazy loading.
+     * Delegado a IndiceClientes.
+     * Complejidad: O(N) en primera llamada (build), O(log 101 + k) en siguientes
      */
     public Cliente[] buscarPorScoring(int scoring) {
-        construirIndiceScoringLazy();
-        Object[] resultados = indiceScoring.buscar(scoring);
-        Cliente[] clientes = new Cliente[resultados.length];
-        for (int i = 0; i < resultados.length; i++) {
-            clientes[i] = (Cliente) resultados[i];
-        }
-        return clientes;
+        return indices.buscarPorScoring(scoring);
     }
 
     /**
      * Obtiene clientes en nivel N del árbol de scoring.
+     * Delegado a IndiceClientes.
      * Complejidad: O(N) una sola vez
      */
     public Cliente[] obtenerClientesEnNivel(int nivel) {
-        if (nivel < 0) return new Cliente[0];
-
-        construirIndiceScoringLazy();
-        Object[] resultados = indiceScoring.obtenerEnNivel(nivel);
-        Cliente[] clientes = new Cliente[resultados.length];
-        for (int i = 0; i < resultados.length; i++) {
-            clientes[i] = (Cliente) resultados[i];
-        }
-        return clientes;
+        return indices.obtenerClientesEnNivel(nivel);
     }
 
     /**
      * Obtiene los top N clientes por cantidad de seguidores.
-     * Complejidad: O(N²) en peor caso, pero típicamente O(N * top)
+     *
+     * Usa un buffer ordenado descendente de tamaño fijo (top).
+     * Un solo recorrido sobre N clientes: cada uno se compara contra el mínimo
+     * del buffer. Si no lo supera, se descarta en O(1). Si lo supera, se inserta
+     * en posición ordenada desplazando elementos → O(top) por inserción.
+     *
+     * Complejidad: O(N) amortizado (la mayoría se descarta en O(1))
+     * Peor caso teórico: O(N * top) si todos tienen seguidores crecientes
      */
     public Cliente[] obtenerClientesMasPopulares(int top) {
-        Cliente[] todos = obtenerTodosLosClientes();
+        Object[] valores = clientes.obtenerValores();
+        if (valores.length == 0 || top <= 0) return new Cliente[0];
 
-        // Selection sort - solo top N
-        for (int i = 0; i < todos.length - 1 && i < top; i++) {
-            int maxIdx = i;
-            for (int j = i + 1; j < todos.length; j++) {
-                if (todos[j].getCantidadSeguidores() > todos[maxIdx].getCantidadSeguidores()) {
-                    maxIdx = j;
+        int capacidad = Math.min(top, valores.length);
+        Cliente[] mejores = new Cliente[capacidad];
+        int[] conteos = new int[capacidad];  // seguidores cacheados para evitar recalcular
+        int llenos = 0;
+
+        for (Object obj : valores) {
+            Cliente c = (Cliente) obj;
+            int segs = c.getCantidadSeguidores();
+
+            if (llenos < capacidad) {
+                // Buffer no lleno: insertar en posición ordenada descendente
+                int pos = llenos;
+                while (pos > 0 && segs > conteos[pos - 1]) {
+                    mejores[pos] = mejores[pos - 1];
+                    conteos[pos] = conteos[pos - 1];
+                    pos--;
                 }
+                mejores[pos] = c;
+                conteos[pos] = segs;
+                llenos++;
+            } else if (segs > conteos[capacidad - 1]) {
+                // Supera al mínimo del buffer: insertar desplazando
+                int pos = capacidad - 1;
+                while (pos > 0 && segs > conteos[pos - 1]) {
+                    mejores[pos] = mejores[pos - 1];
+                    conteos[pos] = conteos[pos - 1];
+                    pos--;
+                }
+                mejores[pos] = c;
+                conteos[pos] = segs;
             }
-            // Swap
-            Cliente temp = todos[i];
-            todos[i] = todos[maxIdx];
-            todos[maxIdx] = temp;
+            // else: no supera el mínimo → descartado en O(1)
         }
 
-        // Retornar top N
-        int cantidad = Math.min(top, todos.length);
-        Cliente[] resultado = new Cliente[cantidad];
-        for (int i = 0; i < cantidad; i++) {
-            resultado[i] = todos[i];
+        if (llenos < capacidad) {
+            Cliente[] resultado = new Cliente[llenos];
+            for (int i = 0; i < llenos; i++) {
+                resultado[i] = mejores[i];
+            }
+            return resultado;
         }
-        return resultado;
+        return mejores;
     }
 
     /**
      * Elimina un cliente del sistema.
-     * Limpia referencias en otros clientes.
+     * Limpia índices y referencias en cascada usando índices bidireccionales.
      *
-     * Complejidad: O(N) donde N = cantidad de clientes
+     * Complejidad: O(seguidores + siguiendo) gracias a índices bidireccionales
      */
     public boolean eliminarCliente(int id) {
         Cliente cliente = clientes.obtener(id);
         if (cliente == null) return false;
 
-        // Registrar en historial
-        if (registrarEnHistorial && sesionValida()) {
-            StringBuilder seguidos = new StringBuilder();
-            int[] idsSeguidos = cliente.getSiguiendo();
-            for (int i = 0; i < idsSeguidos.length; i++) {
-                seguidos.append(idsSeguidos[i]);
-                if (i < idsSeguidos.length - 1) seguidos.append(",");
-            }
-
-            Accion accion = new Accion(TipoAccion.ELIMINAR_CLIENTE,
-                String.valueOf(id),
-                cliente.getNombre(),
-                String.valueOf(cliente.getScoring()),
-                seguidos.toString());
-            getSesion().getHistorial().registrar(accion);
-        }
-
         clientes.eliminar(id);
-        if (scoringIndexConstructed) {
-            indiceScoring.eliminar(cliente.getScoring(), cliente);
-        }
-        eliminarDelIndiceNombre(cliente);
+        indices.eliminarCliente(cliente);
 
-        // Limpiar referencias en cascada
-        Object[] todosLosClientes = clientes.obtenerValores();
-        for (Object obj : todosLosClientes) {
-            Cliente c = (Cliente) obj;
-            c.dejarDeSeguir(id);
+        // Limpiar referencias en cascada usando índices bidireccionales
+        // Solo tocamos los afectados: O(seguidores + siguiendo) en vez de O(N)
+
+        int[] idsSeguidores = cliente.getSeguidores();
+        for (int idSeguidor : idsSeguidores) {
+            Cliente seguidor = clientes.obtener(idSeguidor);
+            if (seguidor != null) {
+                seguidor.dejarDeSeguir(id);
+            }
         }
+
+        int[] idsSeguidos = cliente.getSiguiendo();
+        for (int idSeguido : idsSeguidos) {
+            Cliente seguido = clientes.obtener(idSeguido);
+            if (seguido != null) {
+                seguido.eliminarSeguidor(id);
+            }
+        }
+
         return true;
     }
 
@@ -395,11 +330,7 @@ public class GestorClientes {
 
     /**
      * Registra que un cliente sigue a otro.
-     * Delegado a GestorRelaciones.
-     */
-    /**
-     * Registra que un cliente sigue a otro.
-     * Delegado a GestorRelaciones y registra en historial si está habilitado.
+     * Delegado a GestorRelaciones. Registra en historial si hay sesión activa.
      * Complejidad: O(1) amortizado
      *
      * @param idSolicitante ID del cliente que inicia el seguimiento
@@ -408,7 +339,7 @@ public class GestorClientes {
      */
     public boolean seguir(int idSolicitante, int idObjetivo) {
         boolean resultado = gestorRelaciones.seguir(idSolicitante, idObjetivo);
-        if (resultado && registrarEnHistorial && sesionValida()) {
+        if (resultado && sesionValida()) {
             Accion accion = new Accion(TipoAccion.SEGUIR,
                 String.valueOf(idSolicitante),
                 String.valueOf(idObjetivo));
@@ -419,11 +350,12 @@ public class GestorClientes {
 
     /**
      * Registra que un cliente deja de seguir a otro.
-     * Delegado a GestorRelaciones.
+     * Delegado a GestorRelaciones. Registra en historial si hay sesión activa.
+     * Complejidad: O(1) amortizado
      */
     public boolean dejarDeSeguir(int idSolicitante, int idObjetivo) {
         boolean resultado = gestorRelaciones.dejarDeSeguir(idSolicitante, idObjetivo);
-        if (resultado && registrarEnHistorial && sesionValida()) {
+        if (resultado && sesionValida()) {
             Accion accion = new Accion(TipoAccion.DEJAR_DE_SEGUIR,
                 String.valueOf(idSolicitante),
                 String.valueOf(idObjetivo));
@@ -433,7 +365,7 @@ public class GestorClientes {
     }
 
     /**
-     * Procesa una solicitud de seguimiento.
+     * Envía una solicitud de seguimiento a otro cliente.
      */
     public boolean enviarSolicitud(int idSolicitante, int idObjetivo) {
         Cliente solicitante = clientes.obtener(idSolicitante);
@@ -494,27 +426,12 @@ public class GestorClientes {
     }
 
     // ════════════════════════════════════════════════════════════════════════════════════
-    // UNDO/REDO (Historial de Acciones)
+    // UNDO (Historial de Acciones)
     // ════════════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Activa el registro de acciones en el historial.
-     * Complejidad: O(1)
-     */
-    public void activarHistorial() {
-        this.registrarEnHistorial = true;
-    }
-
-    /**
-     * Desactiva el registro de acciones en el historial.
-     * Complejidad: O(1)
-     */
-    public void desactivarHistorial() {
-        this.registrarEnHistorial = false;
-    }
-
-    /**
-     * Deshace la última acción.
+     * Deshace la última acción registrada en el historial.
+     * Complejidad: O(costo de la operación inversa)
      */
     public Accion deshacer() {
         if (!sesionValida()) return null;
@@ -529,48 +446,15 @@ public class GestorClientes {
 
     /**
      * Ejecuta la lógica inversa de una acción.
+     * Delega a métodos específicos según el tipo de acción.
      */
     private void ejecutarUndo(Accion accion) {
-        String[] datos = accion.getDatos();
-
         switch (accion.getTipo()) {
-            case AGREGAR_CLIENTE:
-                int idEliminar = Integer.parseInt(datos[0]);
-                Cliente cEliminar = clientes.obtener(idEliminar);
-                if (cEliminar != null) {
-                    clientes.eliminar(idEliminar);
-                    eliminarDelIndiceNombre(cEliminar);
-                }
-                break;
-            case ELIMINAR_CLIENTE:
-                int idRestaurar = Integer.parseInt(datos[0]);
-                Cliente restaurado = new Cliente(idRestaurar, datos[1], Integer.parseInt(datos[2]));
-                clientes.insertar(idRestaurar, restaurado);
-                agregarAlIndiceNombre(restaurado);
-                if (datos.length > 3 && !datos[3].isEmpty()) {
-                    for (String seguido : datos[3].split(",")) {
-                        int idSeguidoR = Integer.parseInt(seguido);
-                        restaurado.seguir(idSeguidoR);
-                        Cliente seguidoCliente = clientes.obtener(idSeguidoR);
-                        if (seguidoCliente != null) seguidoCliente.agregarSeguidor(idRestaurar);
-                    }
-                }
-                break;
             case SEGUIR:
-                int idSeguidor = Integer.parseInt(datos[0]);
-                int idSeguido = Integer.parseInt(datos[1]);
-                Cliente cSeguidor = clientes.obtener(idSeguidor);
-                Cliente cSeguido = clientes.obtener(idSeguido);
-                if (cSeguidor != null) cSeguidor.dejarDeSeguir(idSeguido);
-                if (cSeguido != null) cSeguido.eliminarSeguidor(idSeguidor);
+                undoSeguir(accion.getDatos());
                 break;
             case DEJAR_DE_SEGUIR:
-                int idExSeguidor = Integer.parseInt(datos[0]);
-                int idExSeguido = Integer.parseInt(datos[1]);
-                Cliente cExSeguidor = clientes.obtener(idExSeguidor);
-                Cliente cExSeguido = clientes.obtener(idExSeguido);
-                if (cExSeguidor != null) cExSeguidor.seguir(idExSeguido);
-                if (cExSeguido != null) cExSeguido.agregarSeguidor(idExSeguidor);
+                undoDejarDeSeguir(accion.getDatos());
                 break;
             default:
                 break;
@@ -578,10 +462,33 @@ public class GestorClientes {
     }
 
     /**
+     * Undo de SEGUIR: deshace la relación de seguimiento.
+     * datos[0] = ID seguidor, datos[1] = ID seguido
+     */
+    private void undoSeguir(String[] datos) {
+        int idSeguidor = Integer.parseInt(datos[0]);
+        int idSeguido = Integer.parseInt(datos[1]);
+        Cliente seguidor = clientes.obtener(idSeguidor);
+        Cliente seguido = clientes.obtener(idSeguido);
+        if (seguidor != null) seguidor.dejarDeSeguir(idSeguido);
+        if (seguido != null) seguido.eliminarSeguidor(idSeguidor);
+    }
+
+    /**
+     * Undo de DEJAR_DE_SEGUIR: restaura la relación de seguimiento.
+     * datos[0] = ID ex-seguidor, datos[1] = ID ex-seguido
+     */
+    private void undoDejarDeSeguir(String[] datos) {
+        int idSeguidor = Integer.parseInt(datos[0]);
+        int idSeguido = Integer.parseInt(datos[1]);
+        Cliente seguidor = clientes.obtener(idSeguidor);
+        Cliente seguido = clientes.obtener(idSeguido);
+        if (seguidor != null) seguidor.seguir(idSeguido);
+        if (seguido != null) seguido.agregarSeguidor(idSeguidor);
+    }
+
+    /**
      * Obtiene la última acción registrada sin eliminarla.
-     * Complejidad: O(1)
-     *
-     * @return Última acción o null si no hay autenticación o historial vacío
      */
     public Accion verUltimaAccion() {
         if (!sesionValida()) return null;
@@ -590,9 +497,6 @@ public class GestorClientes {
 
     /**
      * Verifica si el historial de acciones está vacío.
-     * Complejidad: O(1)
-     *
-     * @return true si no hay acciones registradas o sin autenticación
      */
     public boolean historialVacio() {
         if (!sesionValida()) return true;
@@ -601,9 +505,6 @@ public class GestorClientes {
 
     /**
      * Obtiene la cantidad total de acciones registradas.
-     * Complejidad: O(1)
-     *
-     * @return Cantidad de acciones, o 0 si sin autenticación
      */
     public int getCantidadAcciones() {
         if (!sesionValida()) return 0;
@@ -611,10 +512,7 @@ public class GestorClientes {
     }
 
     /**
-     * Obtiene todas las acciones registradas en orden de ejecución.
-     * Complejidad: O(N) donde N = cantidad de acciones
-     *
-     * @return Array de todas las acciones, o array vacío si sin autenticación
+     * Obtiene todas las acciones registradas.
      */
     public Accion[] obtenerHistorialCompleto() {
         if (!sesionValida()) return new Accion[0];
@@ -634,94 +532,8 @@ public class GestorClientes {
     }
 
     /**
-     * Agrega un cliente al índice secundario por nombre.
-     * Indexa por nombre completo y por cada parte individual (nombre, apellido).
-     * Esto permite buscar por "Victoria", "Navarro" o "Victoria Navarro".
-     *
-     * Complejidad: O(p) amortizado donde p = cantidad de partes del nombre
-     */
-    private void agregarAlIndiceNombre(Cliente cliente) {
-        String nombreCompleto = cliente.getNombre().toLowerCase();
-
-        // Indexar por nombre completo
-        agregarAlIndiceNombreClave(nombreCompleto, cliente);
-
-        // Indexar por cada parte individual del nombre (nombre, apellido, etc.)
-        String[] partes = nombreCompleto.split("\\s+");
-        if (partes.length > 1) {
-            for (String parte : partes) {
-                if (!parte.isEmpty()) {
-                    agregarAlIndiceNombreClave(parte, cliente);
-                }
-            }
-        }
-    }
-
-    /**
-     * Agrega un cliente a una clave específica del índice de nombre.
-     * Complejidad: O(1) amortizado
-     */
-    private void agregarAlIndiceNombreClave(String clave, Cliente cliente) {
-        Cola<Cliente> cola = indiceNombre.obtener(clave);
-        if (cola == null) {
-            cola = new Cola<>();
-            indiceNombre.insertar(clave, cola);
-        }
-        cola.encolar(cliente);
-    }
-
-    /**
-     * Elimina un cliente del índice secundario por nombre.
-     * Limpia todas las claves asociadas (nombre completo + partes individuales).
-     *
-     * Complejidad: O(p * k) donde p = partes del nombre, k = clientes por clave
-     */
-    private void eliminarDelIndiceNombre(Cliente cliente) {
-        String nombreCompleto = cliente.getNombre().toLowerCase();
-
-        // Eliminar del índice por nombre completo
-        eliminarDelIndiceNombreClave(nombreCompleto, cliente);
-
-        // Eliminar de cada parte individual
-        String[] partes = nombreCompleto.split("\\s+");
-        if (partes.length > 1) {
-            for (String parte : partes) {
-                if (!parte.isEmpty()) {
-                    eliminarDelIndiceNombreClave(parte, cliente);
-                }
-            }
-        }
-    }
-
-    /**
-     * Elimina un cliente de una clave específica del índice de nombre.
-     * Complejidad: O(k) donde k = clientes con esa clave
-     */
-    private void eliminarDelIndiceNombreClave(String clave, Cliente cliente) {
-        Cola<Cliente> cola = indiceNombre.obtener(clave);
-        if (cola == null) return;
-
-        Cola<Cliente> nueva = new Cola<>();
-        while (!cola.estaVacia()) {
-            Cliente c = cola.desencolar();
-            if (c.getId() != cliente.getId()) {
-                nueva.encolar(c);
-            }
-        }
-        if (nueva.estaVacia()) {
-            indiceNombre.eliminar(clave);
-        } else {
-            indiceNombre.insertar(clave, nueva);
-        }
-    }
-
-    /**
      * Obtiene acceso directo al diccionario de clientes.
-     * Úsese con cautela para no romper invariantes.
-     *
      * Complejidad: O(1)
-     *
-     * @return Diccionario primario de clientes indexado por ID
      */
     public Diccionario<Integer, Cliente> getClientes() {
         return clientes;

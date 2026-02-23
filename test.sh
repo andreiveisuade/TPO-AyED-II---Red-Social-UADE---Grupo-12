@@ -92,11 +92,35 @@ else
 fi
 
 echo ""
-echo "═══════════════════════════════════════════"
+
+# ─── 7. Casos de Uso (Suite completa) ───
+echo "Compilando Casos de Uso..."
+javac -cp "$CP" -d out test/casos_de_uso/*.java test/casos_de_uso/edge_cases/*.java test/casos_de_uso/performance/*.java $SRC_FILES
+if [ $? -eq 0 ]; then
+    echo "Ejecutando CasosDeUsoTests..."
+    java -ea -cp out:"$CP" CasosDeUsoTests
+    if [ $? -ne 0 ]; then FAILED=1; fi
+
+    echo ""
+    echo "Ejecutando EdgeCaseTests..."
+    java -ea -cp out:"$CP" EdgeCaseTests
+    if [ $? -ne 0 ]; then FAILED=1; fi
+
+    echo ""
+    echo "Ejecutando PerformanceTests..."
+    java -ea -cp out:"$CP" PerformanceTests
+    if [ $? -ne 0 ]; then FAILED=1; fi
+else
+    echo "Error compilando Casos de Uso"
+    FAILED=1
+fi
+
+echo ""
+echo "==========================================="
 if [ $FAILED -ne 0 ]; then
-    echo "❌ Algunos tests fallaron"
+    echo "Algunos tests fallaron"
     exit 1
 else
-    echo "✅ Todos los tests pasaron exitosamente"
+    echo "Todos los tests pasaron exitosamente"
     exit 0
 fi

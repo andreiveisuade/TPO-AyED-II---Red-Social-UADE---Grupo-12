@@ -39,9 +39,9 @@ public class GestorClientesTest {
         testSeguirClienteInexistente();
         testSeguirAutoLazo();
         testSeguirLimiteExcedido();
-        testDeshacerAgregarCliente();
+        testDeshacerSeguirConTipo();
         testDeshacerSeguir();
-        testUndoEliminarClienteConCascada();
+        testUndoDejarDeSeguir();
         testDeshacerHistorialVacio();
         testVerUltimaAccion();
         testBuscarPorNombreCaseInsensitive();
@@ -53,6 +53,8 @@ public class GestorClientesTest {
         testObtenerClientesEnNivel();
         testSeguirActualizaSeguidores();
         testUndoSeguirRevierteSeguidores();
+        testBuscarPorScoringMuchosDuplicados();
+        testAgregarClientePostBuildScoring();
 
         System.out.println("\n═══════════════════════════════════════════");
         System.out.printf("RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
@@ -228,24 +230,27 @@ public class GestorClientesTest {
         }
     }
 
-    private static void testDeshacerAgregarCliente() {
+    private static void testDeshacerSeguirConTipo() {
         try {
             initTestDB();
             GestorClientes gestor = new GestorClientes(TEST_DB);
-            Sesion.getInstancia().iniciarSesion(new Cliente(999, "Admin", 100));
-            gestor.activarHistorial();
+            int idAlice = gestor.agregarCliente("Alice", 95);
+            int idBob = gestor.agregarCliente("Bob", 88);
 
-            int id = gestor.agregarCliente("Alice", 95);
-            assert gestor.getCantidadClientes() == 1 : "Debe haber 1 cliente";
+            Cliente alice = gestor.buscarPorId(idAlice);
+            Sesion.getInstancia().iniciarSesion(alice);
+
+            gestor.seguir(idAlice, idBob);
+            assert alice.sigueA(idBob) : "Alice debe seguir a Bob";
 
             Accion accion = gestor.deshacer();
             assert accion != null : "Deshacer debe retornar una acción";
-            assert accion.getTipo() == TipoAccion.AGREGAR_CLIENTE : "Tipo debe ser AGREGAR_CLIENTE";
-            assert gestor.buscarPorNombre("Alice").length == 0 : "Alice no debe existir tras undo";
+            assert accion.getTipo() == TipoAccion.SEGUIR : "Tipo debe ser SEGUIR";
+            assert !alice.sigueA(idBob) : "Alice no debe seguir a Bob tras undo";
 
-            reportarExito("Deshacer agregar cliente");
+            reportarExito("Deshacer seguir (verifica tipo SEGUIR)");
         } catch (AssertionError e) {
-            reportarFallo("Deshacer agregar cliente", e.getMessage());
+            reportarFallo("Deshacer seguir (verifica tipo SEGUIR)", e.getMessage());
         }
     }
 
@@ -258,7 +263,6 @@ public class GestorClientesTest {
 
             Cliente alice = gestor.buscarPorId(idAlice);
             Sesion.getInstancia().iniciarSesion(alice);
-            gestor.activarHistorial();
 
             gestor.seguir(idAlice, idBob);
             assert alice.sigueA(idBob) : "Alice debe seguir a Bob";
@@ -272,7 +276,7 @@ public class GestorClientesTest {
         }
     }
 
-    private static void testUndoEliminarClienteConCascada() {
+    private static void testUndoDejarDeSeguir() {
         try {
             initTestDB();
             GestorClientes gestor = new GestorClientes(TEST_DB);
@@ -280,24 +284,26 @@ public class GestorClientesTest {
             int idBob = gestor.agregarCliente("Bob", 80);
 
             Cliente alice = gestor.buscarPorId(idAlice);
+            Cliente bob = gestor.buscarPorId(idBob);
             Sesion.getInstancia().iniciarSesion(alice);
-            gestor.activarHistorial();
 
             gestor.seguir(idAlice, idBob);
             assert alice.sigueA(idBob) : "Alice debe seguir a Bob";
 
-            // Eliminar Bob -> Alice debe dejar de seguirlo
-            gestor.eliminarCliente(idBob);
-            assert !gestor.existeCliente(idBob) : "Bob eliminado";
+            gestor.dejarDeSeguir(idAlice, idBob);
             assert !alice.sigueA(idBob) : "Alice ya no sigue a Bob";
+            assert bob.getCantidadSeguidores() == 0 : "Bob debe tener 0 seguidores";
 
-            // Undo -> Debe restaurar Bob y la relación
-            gestor.deshacer();
-            assert gestor.existeCliente(idBob) : "Bob debe volver a existir";
+            // Undo DEJAR_DE_SEGUIR -> Debe restaurar la relación
+            Accion accion = gestor.deshacer();
+            assert accion != null : "Deshacer debe retornar acción";
+            assert accion.getTipo() == TipoAccion.DEJAR_DE_SEGUIR : "Tipo debe ser DEJAR_DE_SEGUIR";
+            assert alice.sigueA(idBob) : "Alice debe volver a seguir a Bob";
+            assert bob.getCantidadSeguidores() == 1 : "Bob debe tener 1 seguidor";
 
-            reportarExito("Undo eliminar con cascada");
+            reportarExito("Undo dejar de seguir");
         } catch (AssertionError e) {
-            reportarFallo("Undo eliminar con cascada", e.getMessage());
+            reportarFallo("Undo dejar de seguir", e.getMessage());
         }
     }
 
@@ -320,13 +326,16 @@ public class GestorClientesTest {
         try {
             initTestDB();
             GestorClientes gestor = new GestorClientes(TEST_DB);
-            Sesion.getInstancia().iniciarSesion(new Cliente(999, "Admin", 100));
-            gestor.activarHistorial();
+            int idAlice = gestor.agregarCliente("Alice", 95);
+            int idBob = gestor.agregarCliente("Bob", 88);
 
-            gestor.agregarCliente("Alice", 95);
+            Cliente alice = gestor.buscarPorId(idAlice);
+            Sesion.getInstancia().iniciarSesion(alice);
+
+            gestor.seguir(idAlice, idBob);
             Accion accion = gestor.verUltimaAccion();
             assert accion != null : "Debe retornar última acción";
-            assert accion.getTipo() == TipoAccion.AGREGAR_CLIENTE : "Tipo debe ser AGREGAR_CLIENTE";
+            assert accion.getTipo() == TipoAccion.SEGUIR : "Tipo debe ser SEGUIR";
 
             reportarExito("Ver última acción");
         } catch (AssertionError e) {
@@ -380,9 +389,6 @@ public class GestorClientesTest {
         try {
             initTestDB();
             GestorClientes gestor = new GestorClientes(TEST_DB);
-            Sesion.getInstancia().iniciarSesion(new Cliente(999, "Admin", 100));
-            gestor.activarHistorial();
-
             int id1 = gestor.agregarCliente("Alice", 95);
             int id2 = gestor.agregarCliente("Alice", 80);
 
@@ -517,7 +523,6 @@ public class GestorClientesTest {
 
             Cliente alice = gestor.buscarPorId(idAlice);
             Sesion.getInstancia().iniciarSesion(alice);
-            gestor.activarHistorial();
 
             gestor.seguir(idAlice, idBob);
             Cliente bob = gestor.buscarPorId(idBob);
@@ -531,6 +536,55 @@ public class GestorClientesTest {
             reportarExito("Undo seguir revierte seguidores (bidireccional)");
         } catch (AssertionError e) {
             reportarFallo("Undo seguir revierte seguidores (bidireccional)", e.getMessage());
+        }
+    }
+
+    private static void testBuscarPorScoringMuchosDuplicados() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+            // Insertar 100 clientes con el mismo scoring
+            for (int i = 1; i <= 100; i++) {
+                gestor.agregarClienteConId(i, "User" + i, 50);
+            }
+            // Insertar uno con scoring distinto
+            gestor.agregarClienteConId(101, "Distinto", 99);
+
+            Cliente[] encontrados = gestor.buscarPorScoring(50);
+            assert encontrados.length == 100 : "Debe encontrar 100 con scoring 50, encontró: " + encontrados.length;
+
+            Cliente[] otro = gestor.buscarPorScoring(99);
+            assert otro.length == 1 : "Debe encontrar 1 con scoring 99, encontró: " + otro.length;
+
+            reportarExito("Buscar por scoring con muchos duplicados (100 clientes)");
+        } catch (AssertionError e) {
+            reportarFallo("Buscar por scoring con muchos duplicados", e.getMessage());
+        }
+    }
+
+    private static void testAgregarClientePostBuildScoring() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+            gestor.agregarClienteConId(1, "Alice", 80);
+
+            // Trigger lazy build del índice de scoring
+            Cliente[] antes = gestor.buscarPorScoring(80);
+            assert antes.length == 1 : "Debe encontrar 1 antes";
+
+            // Agregar nuevo cliente DESPUÉS de que el índice ya fue construido
+            gestor.agregarClienteConId(2, "Bob", 80);
+            gestor.agregarClienteConId(3, "Carol", 90);
+
+            Cliente[] despues80 = gestor.buscarPorScoring(80);
+            assert despues80.length == 2 : "Debe encontrar 2 con scoring 80 post-build, encontró: " + despues80.length;
+
+            Cliente[] despues90 = gestor.buscarPorScoring(90);
+            assert despues90.length == 1 : "Debe encontrar 1 con scoring 90 post-build, encontró: " + despues90.length;
+
+            reportarExito("Agregar cliente post-build scoring index");
+        } catch (AssertionError e) {
+            reportarFallo("Agregar cliente post-build scoring index", e.getMessage());
         }
     }
 

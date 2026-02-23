@@ -61,58 +61,57 @@ Conclusión: O(1) esperado ✓
 
 ---
 
-## 2. Análisis - Árbol Binario de Búsqueda (ABB)
+## 2. Análisis - Árbol Binario de Búsqueda (ABB) con Cola por Nodo
 
-### Inserción: O(log N) Promedio, O(N) Peor Caso
+### Diseño: ABB<Integer, Cola<Cliente>>
 
-**Análisis Promedio (árbol balanceado):**
-```
-Profundidad esperada = log₂(n)
-Camino para insertar = altura = log₂(n)
-Cada paso: 1 comparación
-Total: O(log n)
-```
+Cada nodo del ABB almacena una `Cola<Cliente>` con todos los clientes de ese scoring.
+Con scoring 0-100, el ABB tiene **máximo 101 nodos**, independientemente de N.
 
-**Peor Caso (árbol degenerado):**
-```
-Si datos llegan ordenados:
-    1
-     \
-      2
-       \
-        3
-         ...
-           1,000,000
-
-Profundidad = n
-Inserciones totales: 1 + 2 + 3 + ... + n = n(n+1)/2 = O(n²)
-```
-
-**Solución Implementada: Lazy Loading**
-```
-Antes: Insertar durante carga
-├─ Clientes en orden por scoring
-├─ ABB degenerado: O(n²)
-└─ Carga: 4+ horas ❌
-
-Después: Insertar bajo demanda
-├─ Primera búsqueda por scoring
-├─ Construcción O(n log n)
-├─ Inserciones subsecuentes: O(log n)
-└─ Amortizado: O(1) en promedio ✓
-```
-
-### Búsqueda: O(log N + K)
+### Inserción: O(log 101) = O(1)
 
 ```
-Búsqueda del valor     O(log n)  - encontrar nodo
-Recorrer duplicados    O(k)      - k = nodos con mismo valor
-Total: O(log n + k)
+Buscar nodo con scoring X:  O(log 101) ≈ 7 comparaciones
+Si existe: encolar en Cola:  O(1)
+Si no existe: crear nodo:    O(1)
+Total: O(log 101) = O(1)
+```
+
+### Construcción del Índice: O(N)
+
+```
+Para cada cliente (N = 1,000,000):
+├─ Buscar nodo en ABB: O(log 101) = O(1)
+├─ Encolar en Cola: O(1)
+└─ Total por cliente: O(1)
+
+Total: N × O(1) = O(N)
+```
+
+**Solución Implementada: Lazy Loading + Cola por Nodo**
+```
+Antes (1 nodo por cliente):
+├─ ABB degenerado con ~10,000 nodos por scoring
+├─ Construcción: O(N²) → 4+ horas ❌
+
+Después (Cola por nodo):
+├─ Máximo 101 nodos en el ABB
+├─ Primera búsqueda: O(N) construcción + O(log 101 + k) búsqueda
+├─ Siguientes búsquedas: O(log 101 + k)
+└─ Amortizado: O(k) en promedio ✓
+```
+
+### Búsqueda: O(log 101 + k) = O(k)
+
+```
+Buscar nodo en ABB     O(log 101) ≈ 7 comparaciones
+Copiar Cola a array    O(k) - k = clientes con ese scoring
+Total: O(log 101 + k) = O(k)
 
 Ejemplo: Buscar scoring = 80 con 1M clientes
-├─ Comparaciones para encontrar: ~20
-├─ Recorrer clientes con scoring 80: ~k
-└─ Total: 20 + k operaciones
+├─ Comparaciones para encontrar nodo: ~7
+├─ Copiar Cola de clientes con scoring 80: ~k
+└─ Total: 7 + k operaciones (antes: ~10,000 con ABB degenerado)
 ```
 
 ---
@@ -146,21 +145,21 @@ Duplicados promedio: 1.02 por nombre
 Caso común: O(1) + O(1) = O(1) ✓
 ```
 
-### Búsqueda por Scoring: O(log N + K) con Lazy Loading
+### Búsqueda por Scoring: O(log 101 + k) = O(k) con Lazy Loading + Cola por Nodo
 
 ```
 Primera llamada:
-├─ Construcción ABB: O(n log n)
-└─ Búsqueda: O(log n + k)
+├─ Construcción ABB: O(N) — cada inserción O(log 101), máx 101 nodos
+└─ Búsqueda: O(log 101 + k) = O(k)
 
 Llamadas subsecuentes:
 ├─ ABB ya construido
-└─ Búsqueda: O(log n + k)
+└─ Búsqueda: O(log 101 + k) = O(k)
 
 Amortizado en M búsquedas:
-= (n log n + (log n + k₁) + (log n + k₂) + ... + (log n + k_M))
-= O(n log n) / M + O(M log n) + O(Σk)
-≈ O(log n + k) para cada búsqueda después de la primera ✓
+= (N + (7 + k₁) + (7 + k₂) + ... + (7 + k_M))
+= O(N) / M + O(7M) + O(Σk)
+≈ O(k) para cada búsqueda después de la primera ✓
 ```
 
 ---
@@ -223,19 +222,27 @@ agregarAlIndiceNombre(c)        O(1)
 Total: O(1) amortizado ✓
 ```
 
-### Eliminar Cliente: O(N)
+### Eliminar Cliente: O(seguidores + siguiendo)
 
 ```
-clientes.obtener(id)            O(1)
-clientes.eliminar(id)           O(1)
-Para cada cliente restante:
-├─ cliente.dejarDeSeguir(id)    O(1)
-└─ Iterar n clientes: O(n)
+clientes.obtener(id)                    O(1)
+clientes.eliminar(id)                   O(1)
+indices.eliminarCliente(cliente)         O(1) — quita de índices nombre y scoring
 
-Total: O(n) donde n = cantidad de clientes
+Para cada seguidor del cliente (s):
+├─ seguidor.dejarDeSeguir(id)           O(1)
+└─ Iterar s seguidores: O(s)
 
-Justificación: Mantener integridad de relaciones
-Las referencias cruzadas requieren actualizar todos
+Para cada seguido del cliente (g):
+├─ seguido.eliminarSeguidor(id)         O(1)
+└─ Iterar g seguidos: O(g)
+
+Total: O(s + g) donde s = seguidores, g = siguiendo
+
+Justificación: Usando índices bidireccionales (seguidores + siguiendo)
+en cada Cliente, solo se visitan los clientes afectados.
+Antes: O(N) recorría TODOS los clientes.
+Después: O(seg + sig) recorre solo los relacionados.
 ```
 
 ---
@@ -283,12 +290,13 @@ Total: O(n * (1 + m + q)) = O(n)
 | `agregarCliente()` | O(1) | GestorClientes | ✅ Diccionario |
 | `buscarPorId()` | O(1) | GestorClientes | ✅ Hash directo |
 | `buscarPorNombre()` | O(1) + O(k) | GestorClientes | ✅ Hash + cola |
-| `buscarPorScoring()` | O(log n + k) | GestorClientes | ✅ ABB lazy |
+| `buscarPorScoring()` | O(log 101 + k) = O(k) | GestorClientes | ✅ ABB lazy, Cola/nodo |
 | `seguir()` | O(1) | GestorRelaciones | ✅ Diccionario |
 | `obtenerVecinos()` | O(1) | GestorRelaciones | ✅ k ≤ 2 |
 | `construirArbolRelaciones()` | O(k log k) | GestorRelaciones | ✅ ABB inserción |
 | `obtenerSeguidoresEnNivel()` | O(k) | GestorRelaciones | ✅ Traversal |
-| `eliminarCliente()` | O(n) | GestorClientes | ✅ Cascada |
+| `eliminarCliente()` | O(seg+sig) | GestorClientes | ✅ Cascada bidireccional |
+| `obtenerClientesMasPopulares()` | O(N) | GestorClientes | ✅ Single-pass buffer |
 | `cargarDesdeArchivo()` | O(n) | PersistenciaClientes | ✅ Carga JSON |
 | `guardarCambios()` | O(n) | PersistenciaClientes | ✅ Serialización |
 
@@ -397,8 +405,8 @@ Consultar relaciones:
 Buscar cliente:
 ├─ Por nombre: O(1)
 ├─ Por ID: O(1)
-├─ Por scoring: O(log n + k)
-└─ Total: O(1) o O(log n) ✓
+├─ Por scoring: O(log 101 + k) = O(k)
+└─ Total: O(1) o O(k) ✓
 ```
 
 ### Escalabilidad Comprobada

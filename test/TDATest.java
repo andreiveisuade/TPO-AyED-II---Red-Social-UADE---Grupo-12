@@ -52,8 +52,8 @@ public class TDATest {
         // Tests Casos Borde y Complejos (Agregados para 10/10)
         testConjuntoCasosBorde();
         testDiccionarioEliminarInexistente();
-        testGestorClientesUndoAgregar();
-        testGestorClientesUndoEliminar();
+        testGestorClientesUndoSeguirBidireccional();
+        testGestorClientesUndoDejarDeSeguir();
         testGestorClientesRelacionesInvalidas();
         
         // Tests Adicionales para 10/10 (Hash negativo y MAX_SEGUIDOS)
@@ -330,7 +330,6 @@ public class TDATest {
             // Simular sesión para que el historial funcione
             Cliente alice = gestor.buscarPorId(idAlice);
             Sesion.getInstancia().iniciarSesion(alice);
-            gestor.activarHistorial(); // Reiniciar/activar historial
             
             // Acción de Seguir
             gestor.seguir(idAlice, idBob);
@@ -526,48 +525,50 @@ public class TDATest {
         }
     }
 
-    private static void testGestorClientesUndoAgregar() {
+    private static void testGestorClientesUndoSeguirBidireccional() {
         try {
             initTestDB();
             GestorClientes g = new GestorClientes(TEST_DB);
-            Sesion.getInstancia().iniciarSesion(new Cliente(999, "Admin", 100)); // Fake session
-            g.activarHistorial();
+            int idA = g.agregarCliente("A", 50);
+            int idB = g.agregarCliente("B", 60);
 
-            g.agregarCliente("UndoUser", 50);
-            assert g.buscarPorNombre("UndoUser").length > 0 : "Usuario debe existir";
-            
+            Cliente a = g.buscarPorId(idA);
+            Sesion.getInstancia().iniciarSesion(a);
+
+            g.seguir(idA, idB);
+            assert a.sigueA(idB) : "A debe seguir a B";
+
             g.deshacer();
-            
-            assert g.buscarPorNombre("UndoUser").length == 0 : "Usuario debe haber sido eliminado tras Undo";
-            
-            reportarExito("Historial - Undo (Agregar Cliente)");
+            assert !a.sigueA(idB) : "A no debe seguir a B tras undo";
+
+            reportarExito("Historial - Undo (Seguir bidireccional)");
         } catch (AssertionError e) {
-            reportarFallo("Historial - Undo (Agregar Cliente)", e.getMessage());
+            reportarFallo("Historial - Undo (Seguir bidireccional)", e.getMessage());
         }
     }
 
-    private static void testGestorClientesUndoEliminar() {
+    private static void testGestorClientesUndoDejarDeSeguir() {
         try {
             initTestDB();
             GestorClientes g = new GestorClientes(TEST_DB);
-            Sesion.getInstancia().iniciarSesion(new Cliente(999, "Admin", 100));
-            g.activarHistorial();
+            int idA = g.agregarCliente("A", 50);
+            int idB = g.agregarCliente("B", 60);
 
-            int id = g.agregarCliente("ToBeDeleted", 50);
-            
-            g.eliminarCliente(id);
-            assert !g.existeCliente(id) : "Cliente eliminado";
-            
+            Cliente a = g.buscarPorId(idA);
+            Sesion.getInstancia().iniciarSesion(a);
+
+            g.seguir(idA, idB);
+            assert a.sigueA(idB) : "A debe seguir a B";
+
+            g.dejarDeSeguir(idA, idB);
+            assert !a.sigueA(idB) : "A no debe seguir a B";
+
             g.deshacer();
-            
-            assert g.existeCliente(id) : "Cliente debe haber sido restaurado";
-            Cliente restaurado = g.buscarPorId(id);
-            assert restaurado.getNombre().equals("ToBeDeleted") : "Nombre restaurado correcto";
-            assert restaurado.getScoring() == 50 : "Scoring restaurado correcto";
-            
-            reportarExito("Historial - Undo (Eliminar Cliente)");
+            assert a.sigueA(idB) : "A debe seguir a B tras undo de dejar de seguir";
+
+            reportarExito("Historial - Undo (Dejar de Seguir)");
         } catch (AssertionError e) {
-            reportarFallo("Historial - Undo (Eliminar Cliente)", e.getMessage());
+            reportarFallo("Historial - Undo (Dejar de Seguir)", e.getMessage());
         }
     }
 

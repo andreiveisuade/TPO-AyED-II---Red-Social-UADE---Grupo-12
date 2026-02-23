@@ -12,19 +12,18 @@ El sistema implementa una **arquitectura modular y escalable** basada en **SOLID
 ┌─────────────────────────────────────────────────────────────┐
 │              GestorClientes (Coordinador Central)            │
 │  - CRUD de clientes                                         │
-│  - Búsquedas por ID, nombre, scoring                        │
-│  - Gestión de índices (lazy loading)                        │
+│  - Búsqueda por ID (índice primario)                        │
 │  - Undo/Redo de acciones                                    │
 │  - Coordinación entre servicios                             │
 └─────────────────────────────────────────────────────────────┘
-    ↓                          ↓                        ↓
-┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│ GestorRelaciones │  │PersistenciaClien-│  │ HistorialAcciones│
-│                  │  │tes (JSON I/O)    │  │   (Ya existía)   │
-│ - Relaciones     │  │                  │  │                  │
-│ - Árboles        │  │ - Carga JSON     │  │ - Undo/Redo      │
-│ - Seguidores     │  │ - Guardado JSON  │  │ - Historial      │
-└──────────────────┘  └──────────────────┘  └──────────────────┘
+    ↓              ↓                ↓                  ↓
+┌───────────────┐┌──────────────────┐┌──────────────────┐┌──────────────────┐
+│IndiceClientes ││ GestorRelaciones ││PersistenciaClien-││HistorialAcciones │
+│               ││                  ││tes (JSON I/O)    ││                  │
+│ - Nombre hash ││ - Relaciones     ││                  ││ - Undo/Redo      │
+│ - Scoring ABB ││ - Árboles        ││ - Carga JSON     ││ - Historial      │
+│ - Lazy loading││ - Seguidores     ││ - Guardado JSON  ││                  │
+└───────────────┘└──────────────────┘└──────────────────┘└──────────────────┘
 ```
 
 ---
@@ -36,23 +35,10 @@ El sistema implementa una **arquitectura modular y escalable** basada en **SOLID
 
 **Responsabilidad:**
 - Coordinar operaciones CRUD de clientes
-- Gestionar índices (primario por ID, secundarios por nombre y scoring)
-- Delegar operaciones especializadas a otros servicios
+- Gestionar índice primario por ID
+- Delegar índices secundarios a `IndiceClientes`
+- Delegar relaciones a `GestorRelaciones`, persistencia a `PersistenciaClientes`
 - Undo/Redo de acciones
-
-**Índices:**
-```
-┌─────────────────────────────────────────┐
-│  Índice Primario: Diccionario<ID>      │ O(1) búsqueda
-│  └─ Almacena todos los clientes        │
-├─────────────────────────────────────────┤
-│  Índice Secundario: Diccionario<Nombre>│ O(1) búsqueda
-│  └─ Mapea nombre → Cola<Cliente>       │
-├─────────────────────────────────────────┤
-│  Índice Secundario: ABB<Scoring>       │ O(log N) búsqueda
-│  └─ Lazy loading (construido bajo demanda)
-└─────────────────────────────────────────┘
-```
 
 **Métodos Clave:**
 
@@ -60,10 +46,43 @@ El sistema implementa una **arquitectura modular y escalable** basada en **SOLID
 |--------|-------------|-------------|
 | `agregarCliente()` | O(1) | Crea cliente con ID autogenerado |
 | `buscarPorId()` | O(1) | Búsqueda directa en diccionario |
-| `buscarPorNombre()` | O(1)+O(k) | O(1) lookup, O(k) cola de clientes |
-| `buscarPorScoring()` | O(log N+k) | Lazy loaded ABB |
+| `buscarPorNombre()` | O(1)+O(k) | Delega a IndiceClientes |
+| `buscarPorScoring()` | O(log 101+k) | Delega a IndiceClientes |
+| `obtenerClientesEnNivel()` | O(N) | Delega a IndiceClientes |
+| `eliminarCliente()` | O(seg+sig) | Cascada bidireccional optimizada |
+| `obtenerClientesMasPopulares()` | O(N) | Single-pass buffer algorithm |
+
+---
+
+### 1b. **IndiceClientes** (Especialista en Indexación)
+**Archivo:** `src/servicio/IndiceClientes.java`
+
+**Responsabilidad:**
+- Gestionar índices secundarios de nombre y scoring
+- Mantener sincronización entre índices y datos
+- Lazy loading del ABB de scoring
+
+**Índices:**
+```
+┌─────────────────────────────────────────┐
+│  Índice Secundario: Diccionario<Nombre>│ O(1) búsqueda
+│  └─ Mapea nombre → Cola<Cliente>       │
+├─────────────────────────────────────────┤
+│  Índice Secundario: ABB<Scoring, Cola> │ O(log 101 + k) búsqueda
+│  └─ Lazy loading, Cola por nodo        │
+│  └─ Máximo 101 nodos (scoring 0-100)  │
+└─────────────────────────────────────────┘
+```
+
+**Métodos Clave:**
+
+| Método | Complejidad | Descripción |
+|--------|-------------|-------------|
+| `buscarPorNombre()` | O(1)+O(k) | Hash lookup + cola de clientes |
+| `buscarPorScoring()` | O(log 101+k) | Lazy loaded ABB, Cola por nodo |
 | `obtenerClientesEnNivel()` | O(N) | Una sola vez, después cached |
-| `eliminarCliente()` | O(N) | Limpia referencias en cascada |
+| `agregarCliente()` | O(1) | Actualiza ambos índices |
+| `eliminarCliente()` | O(1) | Limpia ambos índices |
 
 ---
 
@@ -108,6 +127,17 @@ Cliente[] nivelCuatro = gestorRelaciones.obtenerSeguidoresEnNivel(bob_id, 4);
 - Cargar clientes desde archivo JSON
 - Guardar cambios en JSON
 - Encapsular detalles de serialización (DTO)
+- **Dimensionar el Diccionario dinámicamente** según la cantidad de clientes en el JSON
+
+**Capacidad dinámica (α = 0.75):**
+```
+capacidad = siguientePrimo(⌈N / 0.75⌉)
+```
+- 10 clientes → capacidad 17 (primo mínimo)
+- 1,000 clientes → capacidad 1,361
+- 1,000,000 clientes → capacidad 1,333,339
+- Búsqueda exitosa promedio: 1 + α/2 = 1.375 comparaciones
+- Búsqueda fallida promedio: 1 + α = 1.75 comparaciones
 
 **Métodos:**
 
@@ -140,13 +170,14 @@ Cliente[] nivelCuatro = gestorRelaciones.obtenerSeguidoresEnNivel(bob_id, 4);
 
 | Clase | Responsabilidad |
 |-------|-----------------|
-| `GestorClientes` | Coordinar CRUD y búsquedas |
+| `GestorClientes` | Coordinar CRUD y undo/redo |
+| `IndiceClientes` | Gestionar índices secundarios (nombre + scoring) |
 | `GestorRelaciones` | Gestionar relaciones entre clientes |
 | `PersistenciaClientes` | I/O de JSON |
 | `HistorialAcciones` | Undo/Redo |
 
 **Antes del refactor:** 1 clase con 5 responsabilidades ❌
-**Después del refactor:** 4 clases con 1 responsabilidad cada una ✅
+**Después del refactor:** 5 clases con 1 responsabilidad cada una ✅
 
 ### 2. **Open/Closed Principle (OCP)** ✅
 
@@ -177,7 +208,8 @@ Cada servicio expone solo los métodos que necesita.
 ## 🏅 Principios GRASP Aplicados
 
 ### Information Expert
-- **GestorClientes:** Conoce todos los clientes
+- **GestorClientes:** Conoce todos los clientes (índice primario)
+- **IndiceClientes:** Conoce los índices secundarios (nombre + scoring)
 - **GestorRelaciones:** Conoce relaciones entre clientes
 - **PersistenciaClientes:** Conoce formato JSON
 
@@ -204,14 +236,14 @@ Cada servicio expone solo los métodos que necesita.
 | Operación | Antes | Después | Mejora |
 |-----------|-------|---------|--------|
 | Carga 1M clientes | O(N²) = 4+ horas ❌ | O(N) = 1-2 seg ✅ | **10,000x** |
-| Búsqueda por scoring | O(log N) | O(log N) (lazy) | ✅ |
+| Búsqueda por scoring | O(log N) | O(log 101 + k) (lazy, Cola/nodo) | ✅ |
 | Búsqueda por nombre | O(N) | O(1) | **1000x** |
 | Búsqueda por ID | O(1) | O(1) | ✅ |
 
 ### Operaciones Típicas
 ```
 Crear cliente:       O(1) amortizado
-Eliminar cliente:    O(N) - limpia referencias
+Eliminar cliente:    O(seg+sig) - cascada bidireccional
 Crear relación:      O(1) amortizado
 Consultar nivel:     O(N) - una sola vez
 Guardar JSON:        O(N * M) - N clientes, M seguidos
@@ -249,12 +281,15 @@ El sistema es **escalable** para:
 | Operaciones por segundo | 1,000+ |
 
 **Cuellos de botella identificados:**
-- Eliminación en cascada: O(N)
-- Construcción inicial de ABB: O(N log N)
+- Construcción inicial de ABB: O(N) — solo 101 nodos máximo
 
 **Soluciones aplicadas:**
-- Lazy loading del ABB
+- Lazy loading del ABB de scoring
 - Índices optimizados (Diccionario O(1))
+- Eliminación en cascada optimizada: O(seg+sig) usando índices bidireccionales
+- Cache de getSiguiendo()/getSeguidores() en Cliente
+- obtenerClientesMasPopulares(): single-pass O(N) en vez de O(N*top)
+- Dimensionamiento dinámico del Diccionario (α = 0.75) via `NumerosPrimos.capacidadOptima()`
 
 ---
 
@@ -262,15 +297,15 @@ El sistema es **escalable** para:
 
 ### 1. ¿Por qué Lazy Loading para el ABB de Scoring?
 
-**Problema:** Insertar en ABB durante carga = O(N²)
-**Solución:** Construir bajo demanda la primera vez que se necesita
-**Beneficio:** Carga instantánea (O(N)), búsquedas eficientes (O(log N))
+**Problema:** Insertar en ABB durante carga = O(N²) (1 nodo por cliente)
+**Solución:** Lazy loading + Cola por nodo (máx 101 nodos para scoring 0-100)
+**Beneficio:** Carga instantánea (O(N)), búsquedas eficientes (O(log 101 + k))
 
-### 2. ¿Por qué separar GestorRelaciones?
+### 2. ¿Por qué separar GestorRelaciones e IndiceClientes?
 
-**Problema:** GestorClientes tenía 5 responsabilidades
-**Solución:** Extender GestorRelaciones como especialista
-**Beneficio:** Código modular, testeable, mantenible (SRP)
+**Problema:** GestorClientes tenía 5 responsabilidades (873 líneas)
+**Solución:** Extraer GestorRelaciones, IndiceClientes como especialistas
+**Beneficio:** Código modular, testeable, mantenible (SRP). GestorClientes reducido a ~590 líneas
 
 ### 3. ¿Por qué PersistenciaClientes separado?
 
@@ -321,7 +356,7 @@ PersistenciaClientes.guardarCambios()
 ### Iteración 1
 - [x] CRUD de clientes
 - [x] Búsqueda por nombre (O(1))
-- [x] Búsqueda por scoring (O(log N))
+- [x] Búsqueda por scoring (O(log 101 + k))
 - [x] Historial de acciones
 - [x] Undo/Redo
 - [x] Persistencia JSON
@@ -336,7 +371,7 @@ PersistenciaClientes.guardarCambios()
 
 ### Calidad de Código
 - [x] SOLID aplicado (20% de rúbrica)
-- [x] Tests pasados (9/9)
+- [x] Tests pasados (82/82)
 - [x] Documentación
 - [x] Complejidad optimizada
 - [x] Arquitectura modular

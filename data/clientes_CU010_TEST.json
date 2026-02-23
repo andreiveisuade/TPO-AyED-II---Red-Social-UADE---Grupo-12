@@ -1,0 +1,1 @@
+{ "clientes": [{"id": 1, "nombre": "Alice", "scoring": 95, "siguiendo": [2], "solicitudes": [], "seguidores": [], "amistades": []}, {"id": 2, "nombre": "Bob", "scoring": 80, "siguiendo": [], "solicitudes": [], "seguidores": [1], "amistades": []}]}

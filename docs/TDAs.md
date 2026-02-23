@@ -14,7 +14,7 @@ Se ha diseñado el sistema priorizando un límite superior asintótico de **O(1)
 | **Pila** | `IPila<T>` | *Linked List (LIFO)* | O(1) | O(1) | O(1) | Gestión de estados temporales (Historial). |
 | **Cola** | `ICola<T>` | *Linked List (FIFO)* | O(1) | O(1) | O(1) | Buffer de procesamiento secuencial. |
 | **Conjunto** | `IConjunto` | *Hash Set Adapter* | O(1)* | O(1)* | O(1)* | Validación de unicidad. |
-| **ABB** | `IArbolBinarioBusqueda<K,V>` | *BST con duplicados* | O(log N)** | O(log N)** | O(log N)** | Índice secundario por scoring. |
+| **ABB** | `IArbolBinarioBusqueda<K,V>` | *BST con Cola por nodo* | O(log 101 + k)** | O(log 101)** | O(log 101 + k)** | Índice secundario por scoring (máx 101 nodos). |
 
 *\* Amortizado promedio, asumiendo Función Hash uniforme y factor de carga controlado.*
 *\*\* Promedio, asumiendo distribución razonablemente uniforme de claves. Peor caso O(N) si el árbol degenera.*
@@ -122,8 +122,9 @@ La clase `ArbolBinarioBusqueda<K extends Comparable<K>, V>` implementa un ABB ge
 *   **Recorrido por niveles**: BFS usando `Cola` (TDA propio) para obtener nodos en un nivel específico.
 
 ### 6.3. Aplicación en el Sistema: Índice por Scoring
-*   **Instancia**: `ArbolBinarioBusqueda<Integer, Cliente> indiceScoring` dentro de `GestorClientes`.
-*   **Ventaja**: Búsqueda por scoring pasa de O(N) a **O(log N + k)** donde k = coincidencias.
+*   **Instancia**: `ArbolBinarioBusqueda<Integer, Cola<Cliente>> indiceScoring` dentro de `GestorClientes`.
+*   **Estrategia**: Cada nodo del ABB almacena una `Cola<Cliente>` con todos los clientes de ese scoring. Máximo 101 nodos (scoring 0-100).
+*   **Ventaja**: Búsqueda por scoring pasa de O(N) a **O(log 101 + k)** donde k = coincidencias.
 *   **Caso de uso**: Obtener clientes en el cuarto nivel del árbol para análisis de distribución de scoring.
 
 ---
@@ -169,7 +170,7 @@ classDiagram
     %% Relaciones de Uso
     GestorClientes ..> IDiccionario : usa <Integer, Cliente> (índice por ID)
     GestorClientes ..> IDiccionario : usa <String, Cola> (índice por nombre)
-    GestorClientes ..> IArbolBinarioBusqueda : usa <Integer, Cliente> (índice por scoring)
+    GestorClientes ..> IArbolBinarioBusqueda : usa <Integer, Cola~Cliente~> (índice por scoring)
     Cliente ..> IDiccionario : usa <Integer, Boolean> (siguiendo + seguidores)
     Cliente ..> ICola : usa <Solicitud>
     HistorialAcciones ..> IPila : usa <Accion>
@@ -220,7 +221,7 @@ classDiagram
 
 La selección de estructuras no es accidental, sino el resultado de un análisis de los requisitos no funcionales del sistema:
 1.  **Diccionario O(1)**: Necesario por el volumen de 1M de usuarios (índice por ID y por nombre).
-2.  **ABB O(log N)**: Necesario para búsquedas por scoring sin recorrer todos los clientes.
+2.  **ABB O(log 101 + k)**: Necesario para búsquedas por scoring sin recorrer todos los clientes. Cola por nodo limita a 101 nodos máximo.
 3.  **Pila LIFO**: Necesaria por la lógica de reversión temporal (Undo).
 4.  **Cola FIFO**: Necesaria por la lógica de equidad temporal (Solicitudes).
 

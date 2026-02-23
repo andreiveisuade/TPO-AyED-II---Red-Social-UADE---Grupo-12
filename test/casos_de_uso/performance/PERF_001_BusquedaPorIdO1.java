@@ -56,6 +56,9 @@ public class PERF_001_BusquedaPorIdO1 {
             initTestDB();
             GestorClientes gestor = new GestorClientes(TEST_DB);
 
+            // Warmup para evitar sesgo de JIT/cache
+            gestor.buscarPorId(500);
+
             long inicio1 = System.nanoTime();
             var c1 = gestor.buscarPorId(100);
             long tiempo1 = System.nanoTime() - inicio1;

@@ -2,6 +2,7 @@ package servicio;
 
 import modelo.Cliente;
 import tda.Diccionario;
+import util.NumerosPrimos;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.FileReader;
@@ -37,22 +38,25 @@ public class PersistenciaClientes {
 
     /**
      * Carga los clientes desde un archivo JSON.
-     * Si falla, retorna un diccionario vacío.
+     * Dimensiona el Diccionario automáticamente según la cantidad de clientes
+     * en el archivo, usando factor de carga alpha = 0.75.
+     * Si falla, retorna un diccionario vacío con capacidad default.
      *
      * Complejidad: O(N) donde N = cantidad de clientes en el archivo
      *
-     * @param capacidadDiccionario Capacidad inicial del diccionario
-     * @return Diccionario de clientes cargados
+     * @return Diccionario de clientes cargados con capacidad óptima
      */
-    public Diccionario<Integer, Cliente> cargarDesdeArchivo(int capacidadDiccionario) {
+    public Diccionario<Integer, Cliente> cargarDesdeArchivo() {
         System.out.println("Cargando clientes...");
-        Diccionario<Integer, Cliente> clientes = new Diccionario<>(capacidadDiccionario);
 
         try (FileReader reader = new FileReader(archivoPath)) {
             Gson gson = new Gson();
             ClientesWrapper wrapper = gson.fromJson(reader, ClientesWrapper.class);
 
             if (wrapper != null && wrapper.clientes != null) {
+                int capacidad = NumerosPrimos.capacidadOptima(wrapper.clientes.length);
+                Diccionario<Integer, Cliente> clientes = new Diccionario<>(capacidad);
+
                 for (ClienteDTO dto : wrapper.clientes) {
                     Cliente c = new Cliente(dto.id, dto.nombre, dto.scoring);
                     c.cargarSiguiendo(dto.siguiendo);
@@ -73,12 +77,13 @@ public class PersistenciaClientes {
 
                     clientes.insertar(c.getId(), c);
                 }
+                return clientes;
             }
         } catch (IOException e) {
             System.err.println("Error cargando datos (iniciando vacío): " + e.getMessage());
         }
 
-        return clientes;
+        return new Diccionario<>();
     }
 
     /**
