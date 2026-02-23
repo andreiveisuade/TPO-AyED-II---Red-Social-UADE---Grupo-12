@@ -7,24 +7,25 @@ TDA Árbol Binario de Búsqueda (ABB) - Estructura ordenada por clave.
 
 INVARIANTE DE REPRESENTACIÓN:
 - Para todo nodo N: claves en subárbol izquierdo < N.clave
-- Para todo nodo N: claves en subárbol derecho >= N.clave (permite duplicados a la derecha)
-- cantidad >= 0 siempre
+- Para todo nodo N: claves en subárbol derecho > N.clave
+- Claves duplicadas se agrupan en la Cola del mismo nodo
+- cantidad >= 0 siempre (cuenta total de valores, no de nodos)
 - (raiz == null) <=> (cantidad == 0)
 
-COMPLEJIDAD TEMPORAL:
-- Insertar: O(log N) promedio, O(N) peor caso
-- Buscar: O(log N + k) donde k = cantidad con misma clave
-- Eliminar: O(log N)
+COMPLEJIDAD TEMPORAL (D = claves distintas):
+- Insertar: O(log D) promedio
+- Buscar: O(log D + k) donde k = cantidad con misma clave
+- Eliminar: O(log D + k)
 - Obtener en nivel: O(N)
 
 SOLID: DIP - Implementa interfaz IArbolBinarioBusqueda
 */
-public class ArbolBinarioBusqueda<K extends Comparable<K>, V> 
+public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
     implements IArbolBinarioBusqueda<K, V> {
-    
+
     /* Atributos */
     private NodoABB<K, V> raiz;
-    private int cantidad;
+    private int cantidad;  // Total de valores (no de nodos)
 
     /*
     Constructor que inicializa el árbol vacío.
@@ -36,7 +37,7 @@ public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
 
     /*
     Inserta un par clave-valor en el árbol.
-    Permite duplicados: valores con la misma clave van a la derecha.
+    Si la clave ya existe, agrega el valor a la Cola del nodo existente.
     */
     @Override
     public void insertar(K clave, V valor) {
@@ -49,24 +50,24 @@ public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
 
     /*
     Método auxiliar recursivo para inserción.
+    Agrupa duplicados en el mismo nodo.
     */
     private NodoABB<K, V> insertarRecursivo(NodoABB<K, V> nodo, K clave, V valor) {
-        // Caso base: posición vacía encontrada
         if (nodo == null) {
             return new NodoABB<>(clave, valor);
         }
 
-        // Comparar claves
         int comparacion = clave.compareTo(nodo.getClave());
-        
+
         if (comparacion < 0) {
-            // Menor: ir a la izquierda
             nodo.setIzquierdo(insertarRecursivo(nodo.getIzquierdo(), clave, valor));
-        } else {
-            // Mayor o igual: ir a la derecha (permite duplicados)
+        } else if (comparacion > 0) {
             nodo.setDerecho(insertarRecursivo(nodo.getDerecho(), clave, valor));
+        } else {
+            // Clave duplicada: agregar valor a la Cola del nodo existente
+            nodo.agregarValor(valor);
         }
-        
+
         return nodo;
     }
 
@@ -80,101 +81,126 @@ public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
             return new Object[0];
         }
 
-        // Usar Cola propia como colector de resultados
-        Cola<V> resultados = new Cola<>();
-        buscarRecursivo(raiz, clave, resultados);
-        return colaAArray(resultados);
+        NodoABB<K, V> nodo = buscarNodo(raiz, clave);
+        if (nodo == null) {
+            return new Object[0];
+        }
+
+        return colaAArray(copiarCola(nodo.getValores()));
     }
 
     /*
-    Método auxiliar recursivo para búsqueda.
-    Recolecta todos los nodos con la clave coincidente.
+    Busca el nodo con la clave dada.
     */
-    private void buscarRecursivo(NodoABB<K, V> nodo, K clave, Cola<V> resultados) {
+    private NodoABB<K, V> buscarNodo(NodoABB<K, V> nodo, K clave) {
         if (nodo == null) {
-            return;
+            return null;
         }
 
         int comparacion = clave.compareTo(nodo.getClave());
 
         if (comparacion < 0) {
-            // La clave buscada es menor: solo buscar en izquierda
-            buscarRecursivo(nodo.getIzquierdo(), clave, resultados);
+            return buscarNodo(nodo.getIzquierdo(), clave);
         } else if (comparacion > 0) {
-            // La clave buscada es mayor: solo buscar en derecha
-            buscarRecursivo(nodo.getDerecho(), clave, resultados);
+            return buscarNodo(nodo.getDerecho(), clave);
         } else {
-            // Clave coincide: agregar este nodo
-            resultados.encolar(nodo.getValor());
-
-            // Pueden haber duplicados a la derecha (por nuestra regla de inserción)
-            buscarRecursivo(nodo.getDerecho(), clave, resultados);
+            return nodo;
         }
     }
 
     /*
     Elimina un valor específico asociado a una clave.
+    Si el nodo queda sin valores, se elimina del árbol.
     */
     @Override
     public boolean eliminar(K clave, V valor) {
         if (clave == null || valor == null) {
             return false;
         }
-        
-        int cantidadAntes = cantidad;
-        raiz = eliminarRecursivo(raiz, clave, valor);
-        return cantidad < cantidadAntes;
+
+        NodoABB<K, V> nodo = buscarNodo(raiz, clave);
+        if (nodo == null) {
+            return false;
+        }
+
+        // Buscar y remover el valor de la Cola
+        Cola<V> valores = nodo.getValores();
+        Cola<V> nueva = new Cola<>();
+        boolean encontrado = false;
+
+        while (!valores.estaVacia()) {
+            V v = valores.desencolar();
+            if (!encontrado && v.equals(valor)) {
+                encontrado = true; // Remover solo la primera ocurrencia
+            } else {
+                nueva.encolar(v);
+            }
+        }
+
+        // Restaurar la cola (sin el elemento eliminado)
+        while (!nueva.estaVacia()) {
+            valores.encolar(nueva.desencolar());
+        }
+
+        if (!encontrado) {
+            return false;
+        }
+
+        cantidad--;
+
+        // Si el nodo quedó vacío, eliminarlo del árbol
+        if (valores.estaVacia()) {
+            raiz = eliminarNodo(raiz, clave);
+        }
+
+        return true;
     }
 
     /*
-    Método auxiliar recursivo para eliminación.
-    Elimina el nodo que contiene la clave Y el valor específico.
+    Elimina un nodo del árbol (cuando su Cola queda vacía).
     */
-    private NodoABB<K, V> eliminarRecursivo(NodoABB<K, V> nodo, K clave, V valor) {
+    private NodoABB<K, V> eliminarNodo(NodoABB<K, V> nodo, K clave) {
         if (nodo == null) {
             return null;
         }
 
         int comparacion = clave.compareTo(nodo.getClave());
-        
+
         if (comparacion < 0) {
-            // Buscar en izquierda
-            nodo.setIzquierdo(eliminarRecursivo(nodo.getIzquierdo(), clave, valor));
+            nodo.setIzquierdo(eliminarNodo(nodo.getIzquierdo(), clave));
         } else if (comparacion > 0) {
-            // Buscar en derecha
-            nodo.setDerecho(eliminarRecursivo(nodo.getDerecho(), clave, valor));
+            nodo.setDerecho(eliminarNodo(nodo.getDerecho(), clave));
         } else {
-            // Clave coincide: verificar si el valor también coincide
-            if (nodo.getValor().equals(valor)) {
-                // Este es el nodo a eliminar
-                cantidad--;
-                
-                // Caso 1: Nodo sin hijos
-                if (nodo.getIzquierdo() == null && nodo.getDerecho() == null) {
-                    return null;
-                }
-                
-                // Caso 2: Nodo con un solo hijo
-                if (nodo.getIzquierdo() == null) {
-                    return nodo.getDerecho();
-                }
-                if (nodo.getDerecho() == null) {
-                    return nodo.getIzquierdo();
-                }
-                
-                // Caso 3: Nodo con dos hijos
-                // Reemplazar con el menor del subárbol derecho (sucesor inorder)
-                NodoABB<K, V> sucesor = encontrarMinimo(nodo.getDerecho());
-                NodoABB<K, V> reemplazo = new NodoABB<>(sucesor.getClave(), sucesor.getValor());
-                reemplazo.setIzquierdo(nodo.getIzquierdo());
-                reemplazo.setDerecho(eliminarMinimo(nodo.getDerecho()));
-                nodo = reemplazo;
-            } else {
-                // Valor no coincide: puede haber duplicado a la derecha
-                nodo.setDerecho(eliminarRecursivo(nodo.getDerecho(), clave, valor));
+            // Nodo encontrado - eliminarlo
+
+            // Caso 1: Sin hijos
+            if (nodo.getIzquierdo() == null && nodo.getDerecho() == null) {
+                return null;
             }
+
+            // Caso 2: Un solo hijo
+            if (nodo.getIzquierdo() == null) {
+                return nodo.getDerecho();
+            }
+            if (nodo.getDerecho() == null) {
+                return nodo.getIzquierdo();
+            }
+
+            // Caso 3: Dos hijos - reemplazar con sucesor inorder
+            NodoABB<K, V> sucesor = encontrarMinimo(nodo.getDerecho());
+            NodoABB<K, V> reemplazo = new NodoABB<>(sucesor.getClave(), sucesor.getValor());
+            // Copiar todos los valores del sucesor
+            Cola<V> sucValores = copiarCola(sucesor.getValores());
+            // El constructor ya puso el primer valor, desencolar para no duplicar
+            sucValores.desencolar();
+            while (!sucValores.estaVacia()) {
+                reemplazo.agregarValor(sucValores.desencolar());
+            }
+            reemplazo.setIzquierdo(nodo.getIzquierdo());
+            reemplazo.setDerecho(eliminarNodo(nodo.getDerecho(), sucesor.getClave()));
+            return reemplazo;
         }
-        
+
         return nodo;
     }
 
@@ -185,17 +211,6 @@ public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
         while (nodo.getIzquierdo() != null) {
             nodo = nodo.getIzquierdo();
         }
-        return nodo;
-    }
-
-    /*
-    Elimina el nodo con la clave mínima en un subárbol.
-    */
-    private NodoABB<K, V> eliminarMinimo(NodoABB<K, V> nodo) {
-        if (nodo.getIzquierdo() == null) {
-            return nodo.getDerecho();
-        }
-        nodo.setIzquierdo(eliminarMinimo(nodo.getIzquierdo()));
         return nodo;
     }
 
@@ -211,14 +226,14 @@ public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
 
     /*
     Obtiene todos los valores en el nivel N del árbol.
-    Utiliza recorrido BFS (Breadth-First Search) por niveles.
+    Incluye todos los valores de cada nodo en ese nivel.
     */
     @Override
     public Object[] obtenerEnNivel(int nivel) {
         if (nivel < 0 || raiz == null) {
             return new Object[0];
         }
-        
+
         Cola<V> resultados = new Cola<>();
         Cola<NodoABB<K, V>> cola = new Cola<>();
         cola.encolar(raiz);
@@ -228,20 +243,21 @@ public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
         while (!cola.estaVacia()) {
             int nodosEnNivel = cola.getCantidad();
 
-            // Si llegamos al nivel deseado, recolectar todos los nodos
             if (nivelActual == nivel) {
                 for (int i = 0; i < nodosEnNivel; i++) {
                     NodoABB<K, V> nodo = cola.desencolar();
-                    resultados.encolar(nodo.getValor());
+                    // Agregar TODOS los valores del nodo
+                    Cola<V> copia = copiarCola(nodo.getValores());
+                    while (!copia.estaVacia()) {
+                        resultados.encolar(copia.desencolar());
+                    }
                 }
                 break;
             }
 
-            // Procesar todos los nodos del nivel actual
             for (int i = 0; i < nodosEnNivel; i++) {
                 NodoABB<K, V> nodo = cola.desencolar();
 
-                // Encolar hijos para el siguiente nivel
                 if (nodo.getIzquierdo() != null) {
                     cola.encolar(nodo.getIzquierdo());
                 }
@@ -276,6 +292,27 @@ public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
         int alturaDer = getAlturaRecursiva(nodo.getDerecho());
 
         return 1 + Math.max(alturaIzq, alturaDer);
+    }
+
+    /*
+    Copia una Cola sin modificar la original.
+    Complejidad: O(k) donde k = cantidad de elementos.
+    */
+    private Cola<V> copiarCola(Cola<V> original) {
+        Cola<V> copia = new Cola<>();
+        Cola<V> aux = new Cola<>();
+
+        while (!original.estaVacia()) {
+            V v = original.desencolar();
+            copia.encolar(v);
+            aux.encolar(v);
+        }
+        // Restaurar la original
+        while (!aux.estaVacia()) {
+            original.encolar(aux.desencolar());
+        }
+
+        return copia;
     }
 
     /*

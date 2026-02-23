@@ -2,30 +2,24 @@ package tda;
 
 /*
  * Nodo para el Árbol Binario de Búsqueda (ABB).
- * Almacena una clave (Comparable) y un valor asociado.
- * Para manejar colisiones (mismo scoring para diferentes clientes),
- * el valor podría ser una lista, pero por simplicidad en esta iteración
- * asumiremos que la lógica de colisión se maneja en el ABB o nivel superior
- * permitiendo nodos duplicados o listas.
- * 
- * En este caso, para soportar múltiples clientes con el mismo scoring sin listas en el nodo,
- * usaremos la inserción convencional de ABB donde valores iguales van a la derecha/izquierda 
- * consistentemente, o almacenaremos una lista de valores.
- * 
- * ESTRATEGIA: Lista de valores por nodo para manejar claves duplicadas eficientemente.
+ * Almacena una clave (Comparable) y una Cola de valores asociados.
+ *
+ * ESTRATEGIA: Cola de valores por nodo para manejar claves duplicadas eficientemente.
+ * Cuando múltiples valores comparten la misma clave, se almacenan en la Cola del nodo
+ * en lugar de crear nodos separados encadenados. Esto mantiene la altura del árbol
+ * proporcional a la cantidad de claves DISTINTAS, no al total de valores.
  */
 public class NodoABB<K extends Comparable<K>, V> {
     private K clave;
-    private V valor; // Payload simple
-    // Para simplificar y no depender de TDA Lista ajena, usaremos un modelo de nodo simple
-    // Si hay colisión de clave, el ABB insertará un nuevo nodo en la rama correspondiente (derecha >=).
-    
+    private Cola<V> valores;
+
     private NodoABB<K, V> izquierdo;
     private NodoABB<K, V> derecho;
 
     public NodoABB(K clave, V valor) {
         this.clave = clave;
-        this.valor = valor;
+        this.valores = new Cola<>();
+        this.valores.encolar(valor);
         this.izquierdo = null;
         this.derecho = null;
     }
@@ -35,11 +29,25 @@ public class NodoABB<K extends Comparable<K>, V> {
     }
 
     public V getValor() {
-        return valor;
+        return valores.verFrente();
     }
 
     public void setValor(V valor) {
-        this.valor = valor;
+        // Reemplaza todos los valores con uno solo
+        this.valores = new Cola<>();
+        this.valores.encolar(valor);
+    }
+
+    public Cola<V> getValores() {
+        return valores;
+    }
+
+    public void agregarValor(V valor) {
+        valores.encolar(valor);
+    }
+
+    public int getCantidadValores() {
+        return valores.getCantidad();
     }
 
     public NodoABB<K, V> getIzquierdo() {

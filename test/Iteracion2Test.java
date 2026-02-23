@@ -16,17 +16,36 @@ import tda.ArbolBinarioBusqueda;
  */
 public class Iteracion2Test {
 
+    private static final String TEST_DB = "data/clientes_JSON_TEST.json";
     private static GestorClientes gestor;
     private static int testsPasados = 0;
     private static int testsFallidos = 0;
+
+    private static void escribirJson(String json) {
+        try (java.io.FileWriter writer = new java.io.FileWriter(TEST_DB)) {
+            writer.write(json);
+        } catch (java.io.IOException e) {
+            System.err.println("Error escribiendo JSON de test: " + e.getMessage());
+        }
+    }
 
     public static void main(String[] args) {
         System.out.println("╔════════════════════════════════════════════════════════╗");
         System.out.println("║     TESTS ITERACIÓN 2: RELACIONES ENTRE CLIENTES       ║");
         System.out.println("╚════════════════════════════════════════════════════════╝\n");
 
+        // Escribir datos de prueba antes de cargar
+        String json = "{ \"clientes\": ["
+            + "{\"id\": 1, \"nombre\": \"Alice\", \"scoring\": 95, \"siguiendo\": [], \"solicitudes\": [], \"seguidores\": [], \"amistades\": []},"
+            + "{\"id\": 2, \"nombre\": \"Bob\", \"scoring\": 80, \"siguiendo\": [], \"solicitudes\": [], \"seguidores\": [], \"amistades\": []},"
+            + "{\"id\": 3, \"nombre\": \"Charlie\", \"scoring\": 88, \"siguiendo\": [], \"solicitudes\": [], \"seguidores\": [], \"amistades\": []},"
+            + "{\"id\": 4, \"nombre\": \"David\", \"scoring\": 70, \"siguiendo\": [], \"solicitudes\": [], \"seguidores\": [], \"amistades\": []},"
+            + "{\"id\": 5, \"nombre\": \"Eve\", \"scoring\": 60, \"siguiendo\": [], \"solicitudes\": [], \"seguidores\": [], \"amistades\": []}"
+            + "] }";
+        escribirJson(json);
+
         // Cargar datos de prueba
-        gestor = new GestorClientes("data/clientes_JSON_TEST.json");
+        gestor = new GestorClientes(TEST_DB);
         System.out.println();
 
         // Ejecutar tests

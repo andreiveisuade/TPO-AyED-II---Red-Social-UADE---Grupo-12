@@ -1,10 +1,16 @@
 #!/bin/bash
 
-# Directorio del proyecto
+# Script para ejecutar la aplicación
+
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
-# Limpiar .class anteriores
+echo "╔═══════════════════════════════════════════════════════════════════════════╗"
+echo "║                      EJECUTANDO APLICACIÓN                               ║"
+echo "╚═══════════════════════════════════════════════════════════════════════════╝"
+echo ""
+
+# Limpiar build anterior
 echo "Limpiando build anterior..."
 rm -rf out
 

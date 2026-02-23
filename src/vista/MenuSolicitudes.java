@@ -68,40 +68,47 @@ public class MenuSolicitudes {
     }
 
     /*
-    Lista los amigos (usuarios seguidos) del usuario actual.
+    Lista los amigos (usuarios seguidos) del usuario actual con navegación.
     */
     private void listarAmigos() {
-        limpiarPantalla();
-        utils.mostrarCabecera("Inicio", "Amigos", "Mis Amigos");
-        
-        Sesion sesion = getSesion();
-        if (!sesion.estaAutenticado()) return;
-        
-        Cliente usuario = sesion.getUsuarioActual();
-        int[] siguiendo = usuario.getSiguiendo();
-        int cantidad = usuario.getCantidadSiguiendo();
-        
-        if (cantidad == 0) {
-            imprimirAviso("No sigues a nadie aún.");
-            return;
-        }
-        
-        System.out.println("+------+--------------------+");
-        System.out.println("| ID   | Usuario            |");
-        System.out.println("+------+--------------------+");
-        
-        for (int i = 0; i < cantidad; i++) {
-            int idAmigo = siguiendo[i];
-            Cliente amigo = gestor.buscarPorId(idAmigo);
-            
-            String idStr = String.format("%-4d", idAmigo);
-            String nombreStr = (amigo != null) ? amigo.getNombre() : "Desconocido";
-            nombreStr = String.format("%-18s", nombreStr);
-            
-            System.out.println("| " + idStr + " | " + nombreStr + " |");
-        }
-        System.out.println("+------+--------------------+");
-        System.out.println("\nTotal: " + cantidad + " amigos.");
+        int opcion;
+        do {
+            limpiarPantalla();
+            utils.mostrarCabecera("Inicio", "Amigos", "Mis Amigos");
+
+            Sesion sesion = getSesion();
+            if (!sesion.estaAutenticado()) return;
+
+            Cliente usuario = sesion.getUsuarioActual();
+            int[] siguiendo = usuario.getSiguiendo();
+            int cantidad = usuario.getCantidadSiguiendo();
+
+            if (cantidad == 0) {
+                imprimirAviso("No sigues a nadie aún.");
+                return;
+            }
+
+            System.out.println("+------+--------------------+");
+            System.out.println("| ID   | Usuario            |");
+            System.out.println("+------+--------------------+");
+
+            for (int i = 0; i < cantidad; i++) {
+                int idAmigo = siguiendo[i];
+                Cliente amigo = gestor.buscarPorId(idAmigo);
+
+                String idStr = String.format("%-4d", idAmigo);
+                String nombreStr = (amigo != null) ? amigo.getNombre() : "Desconocido";
+                nombreStr = String.format("%-18s", nombreStr);
+
+                System.out.println("| " + idStr + " | " + nombreStr + " |");
+            }
+            System.out.println("+------+--------------------+");
+            System.out.println("\nTotal: " + cantidad + " amigos.");
+            System.out.println("\n 0. Volver");
+            imprimirSeparador(MenuUtils.ANCHO);
+            System.out.print("Opción: ");
+            opcion = utils.leerEntero();
+        } while (opcion != 0);
     }
 
     /*
@@ -211,76 +218,145 @@ public class MenuSolicitudes {
     }
 
     /*
-    Busca usuarios por nombre y ofrece la opción de enviar solicitud.
+    Busca usuarios por nombre con paginación y ofrece la opción de enviar solicitud.
+    Muestra resultados de a PAGINA_SIZE (15) con navegación Anterior/Siguiente.
+
+    Complejidad: O(1) por página mostrada (los resultados ya están en memoria)
     */
+    private static final int PAGINA_SIZE = 15;
+
     private String buscarPorNombreYAgregar() {
         System.out.print("Nombre: ");
         String nombre = utils.capitalizarNombre(scanner.nextLine().trim());
-        
+
         Cliente[] clientes = gestor.buscarPorNombre(nombre);
 
-        if (clientes.length > 0) {
-            System.out.println();
-            for (Cliente c : clientes) {
-                System.out.println(" - ID: " + c.getId() + " | " + c.getNombre() + " (Influencia: " + c.getScoring() + ")");
-            }
-            System.out.println();
-            
-            System.out.print("Ingrese ID para agregar (0 cancelar): ");
-            int idSel = utils.leerEntero();
-            if (idSel != 0) {
-                Cliente sel = gestor.buscarPorId(idSel);
-                if (sel != null) return enviarSolicitud(sel);
-            }
-            return "";
-        } else {
+        if (clientes.length == 0) {
             return "[ERROR] No encontrado";
         }
-    }
 
-    /*
-    Busca usuarios por nivel de scoring/influencia.
-    */
-    private String buscarPorScoring() {
-        System.out.print("Influencia (0-100): ");
-        int scoring = utils.leerEntero();
-        
-        Cliente[] encontrados = gestor.buscarPorScoring(scoring);
-        
-        if (encontrados.length == 0) return "[AVISO] Sin resultados";
-        
-        System.out.println();
-        for (Cliente c : encontrados) {
-            System.out.println(" - ID: " + c.getId() + " | " + c.getNombre());
-        }
-        System.out.println("\nTotal: " + encontrados.length);
-        pausar(scanner);
+        int pagina = 0;
+        int totalPaginas = (clientes.length + PAGINA_SIZE - 1) / PAGINA_SIZE;
+        int opcion;
+
+        do {
+            limpiarPantalla();
+            utils.mostrarCabecera("Inicio", "Amigos", "Explorar", "Buscar: " + nombre);
+
+            int desde = pagina * PAGINA_SIZE;
+            int hasta = Math.min(desde + PAGINA_SIZE, clientes.length);
+
+            System.out.println("Resultados para \"" + nombre + "\" (" + clientes.length
+                + " encontrados) - Página " + (pagina + 1) + "/" + totalPaginas + "\n");
+            System.out.println("+------+--------------------+---------+");
+            System.out.println("| ID   | Usuario            | Influen |");
+            System.out.println("+------+--------------------+---------+");
+
+            for (int i = desde; i < hasta; i++) {
+                Cliente c = clientes[i];
+                String idCol = String.format("%-4d", c.getId());
+                String nombreCol = String.format("%-18s", c.getNombre());
+                String scoreCol = String.format("%-7d", c.getScoring());
+                System.out.println("| " + idCol + " | " + nombreCol + "| " + scoreCol + "|");
+            }
+            System.out.println("+------+--------------------+---------+");
+
+            System.out.println();
+            if (pagina > 0) System.out.println(" 1. << Anterior");
+            if (pagina < totalPaginas - 1) System.out.println(" 2. Siguiente >>");
+            System.out.println(" 3. Agregar por ID");
+            System.out.println(" 0. Volver");
+            imprimirSeparador(MenuUtils.ANCHO);
+            System.out.print("Opción: ");
+            opcion = utils.leerEntero();
+
+            switch (opcion) {
+                case 1:
+                    if (pagina > 0) pagina--;
+                    break;
+                case 2:
+                    if (pagina < totalPaginas - 1) pagina++;
+                    break;
+                case 3:
+                    System.out.print("Ingrese ID para agregar (0 cancelar): ");
+                    int idSel = utils.leerEntero();
+                    if (idSel != 0) {
+                        Cliente sel = gestor.buscarPorId(idSel);
+                        if (sel != null) return enviarSolicitud(sel);
+                        return "[ERROR] ID no encontrado";
+                    }
+                    break;
+            }
+        } while (opcion != 0);
+
         return "";
     }
 
     /*
-    Lista todos los usuarios registrados en el sistema.
+    Busca usuarios por nivel de scoring/influencia con navegación.
+    */
+    private String buscarPorScoring() {
+        int opcion;
+        do {
+            limpiarPantalla();
+            utils.mostrarCabecera("Inicio", "Amigos", "Explorar", "Buscar por Influencia");
+
+            System.out.print("Influencia (0-100): ");
+            int scoring = utils.leerEntero();
+
+            Cliente[] encontrados = gestor.buscarPorScoring(scoring);
+
+            if (encontrados.length == 0) {
+                imprimirAviso("Sin resultados");
+            } else {
+                System.out.println();
+                for (Cliente c : encontrados) {
+                    System.out.println(" - ID: " + c.getId() + " | " + c.getNombre() + " (Influencia: " + c.getScoring() + ")");
+                }
+                System.out.println("\nTotal: " + encontrados.length + " usuarios");
+            }
+
+            System.out.println("\n 0. Volver");
+            imprimirSeparador(MenuUtils.ANCHO);
+            System.out.print("Opción: ");
+            opcion = utils.leerEntero();
+        } while (opcion != 0);
+        return "";
+    }
+
+    /*
+    Lista todos los usuarios registrados en el sistema con navegación.
     */
     private void listarTodos() {
-        Cliente[] clientes = gestor.obtenerTodosLosClientes();
+        int opcion;
+        do {
+            limpiarPantalla();
+            utils.mostrarCabecera("Inicio", "Amigos", "Explorar", "Listar Todos");
 
-        if (clientes.length == 0) {
-            imprimirAviso("No hay usuarios registrados");
-            return;
-        }
+            Cliente[] clientes = gestor.obtenerTodosLosClientes();
 
-        System.out.println("+------+--------------------+---------+");
-        System.out.println("| ID   | Usuario            | Influen |");
-        System.out.println("+------+--------------------+---------+");
-        
-        for (Cliente c : clientes) {
-            String idCol = String.format("%-4d", c.getId());
-            String nombreCol = String.format("%-18s", c.getNombre());
-            String scoreCol = String.format("%-7d", c.getScoring());
-            System.out.println("| " + idCol + " | " + nombreCol + "| " + scoreCol + "|");
-        }
-        System.out.println("+------+--------------------+---------+");
-        System.out.println("Total: " + gestor.getCantidadClientes() + " usuarios");
+            if (clientes.length == 0) {
+                imprimirAviso("No hay usuarios registrados");
+                return;
+            }
+
+            System.out.println("+------+--------------------+---------+");
+            System.out.println("| ID   | Usuario            | Influen |");
+            System.out.println("+------+--------------------+---------+");
+
+            for (Cliente c : clientes) {
+                String idCol = String.format("%-4d", c.getId());
+                String nombreCol = String.format("%-18s", c.getNombre());
+                String scoreCol = String.format("%-7d", c.getScoring());
+                System.out.println("| " + idCol + " | " + nombreCol + "| " + scoreCol + "|");
+            }
+            System.out.println("+------+--------------------+---------+");
+            System.out.println("Total: " + gestor.getCantidadClientes() + " usuarios");
+            System.out.println("\n 0. Volver");
+            imprimirSeparador(MenuUtils.ANCHO);
+            System.out.print("Opción: ");
+            opcion = utils.leerEntero();
+        } while (opcion != 0);
     }
 
     /*
@@ -361,70 +437,105 @@ public class MenuSolicitudes {
     }
     
     /*
-    Muestra los clientes ubicados en el cuarto nivel (nivel 3, 0-indexed) del ABB de scoring,
-    ordenados por cantidad de seguidores de mayor a menor.
+    Muestra los seguidores del usuario logueado ubicados en el cuarto nivel (nivel 3, 0-indexed)
+    del ABB construido con sus seguidores ordenados por scoring.
+    Ordenados por cantidad de seguidores de mayor a menor, con navegación.
+
+    ITERACIÓN 2: "Utilizar una implementación de ABB cargando los datos de los clientes
+    que se siguen e imprimir los clientes que están en el cuarto nivel, para ver quién
+    tiene más seguidores."
+
+    Complejidad: O(k log k) para construir el ABB + O(m) para obtener nivel
+    donde k = seguidores del usuario, m = nodos en nivel 4
     */
     private void mostrarCuartoNivelABB() {
-        limpiarPantalla();
-        utils.mostrarCabecera("Inicio", "Amigos", "Explorar", "ABB - Cuarto Nivel");
+        int opcion;
+        do {
+            limpiarPantalla();
+            utils.mostrarCabecera("Inicio", "Amigos", "Explorar", "ABB - Cuarto Nivel");
 
-        Cliente[] clientes = gestor.obtenerClientesEnNivel(3);
+            Sesion sesion = getSesion();
+            if (!sesion.estaAutenticado()) {
+                imprimirAviso("Debes iniciar sesión para ver el análisis ABB.");
+                pausar(scanner);
+                return;
+            }
 
-        if (clientes.length == 0) {
-            imprimirAviso("No hay clientes en el cuarto nivel del ABB de scoring.");
-            return;
-        }
+            int idUsuario = sesion.getUsuarioActual().getId();
+            Cliente[] clientes = gestor.obtenerSeguidoresEnNivel(idUsuario, 3);
 
-        // Ordenar por cantidad de seguidores (mayor a menor) - Selection Sort
-        for (int i = 0; i < clientes.length - 1; i++) {
-            int maxIdx = i;
-            for (int j = i + 1; j < clientes.length; j++) {
-                if (clientes[j].getCantidadSeguidores() > clientes[maxIdx].getCantidadSeguidores()) {
-                    maxIdx = j;
+            if (clientes.length == 0) {
+                imprimirAviso("No hay seguidores en el cuarto nivel del ABB de @"
+                    + sesion.getUsuarioActual().getNombre() + ".");
+                System.out.println(" 0. Volver");
+                imprimirSeparador(MenuUtils.ANCHO);
+                System.out.print("Opción: ");
+                opcion = utils.leerEntero();
+                continue;
+            }
+
+            // Ordenar por cantidad de seguidores (mayor a menor) - Selection Sort
+            // Con ABB por usuario, el array es pequeño → O(m²) con m chico es aceptable
+            for (int i = 0; i < clientes.length - 1; i++) {
+                int maxIdx = i;
+                for (int j = i + 1; j < clientes.length; j++) {
+                    if (clientes[j].getCantidadSeguidores() > clientes[maxIdx].getCantidadSeguidores()) {
+                        maxIdx = j;
+                    }
+                }
+                if (maxIdx != i) {
+                    Cliente temp = clientes[i];
+                    clientes[i] = clientes[maxIdx];
+                    clientes[maxIdx] = temp;
                 }
             }
-            if (maxIdx != i) {
-                Cliente temp = clientes[i];
-                clientes[i] = clientes[maxIdx];
-                clientes[maxIdx] = temp;
+
+            System.out.println("Seguidores de @" + sesion.getUsuarioActual().getNombre()
+                + " en el cuarto nivel del ABB (por scoring):\n");
+            System.out.println("+------+--------------------+---------+------------+");
+            System.out.println("| ID   | Usuario            | Scoring | Seguidores |");
+            System.out.println("+------+--------------------+---------+------------+");
+
+            for (Cliente c : clientes) {
+                String idCol = String.format("%-4d", c.getId());
+                String nombreCol = String.format("%-18s", c.getNombre());
+                String scoreCol = String.format("%-7d", c.getScoring());
+                String segCol = String.format("%-10d", c.getCantidadSeguidores());
+                System.out.println("| " + idCol + " | " + nombreCol + "| " + scoreCol + "| " + segCol + " |");
             }
-        }
+            System.out.println("+------+--------------------+---------+------------+");
+            System.out.println("Total: " + clientes.length + " seguidores en el cuarto nivel.");
 
-        System.out.println("+------+--------------------+---------+------------+");
-        System.out.println("| ID   | Usuario            | Scoring | Seguidores |");
-        System.out.println("+------+--------------------+---------+------------+");
+            if (clientes[0].getCantidadSeguidores() > 0) {
+                System.out.println("Mayor influencia: " + clientes[0].getNombre()
+                    + " (" + clientes[0].getCantidadSeguidores() + " seguidores)");
+            }
 
-        for (Cliente c : clientes) {
-            String idCol = String.format("%-4d", c.getId());
-            String nombreCol = String.format("%-18s", c.getNombre());
-            String scoreCol = String.format("%-7d", c.getScoring());
-            String segCol = String.format("%-10d", c.getCantidadSeguidores());
-            System.out.println("| " + idCol + " | " + nombreCol + "| " + scoreCol + "| " + segCol + " |");
-        }
-        System.out.println("+------+--------------------+---------+------------+");
-        System.out.println("Total: " + clientes.length + " clientes en el cuarto nivel.");
-
-        if (clientes[0].getCantidadSeguidores() > 0) {
-            System.out.println("Mayor influencia: " + clientes[0].getNombre() + " (" + clientes[0].getCantidadSeguidores() + " seguidores)");
-        }
+            System.out.println("\n 0. Volver");
+            imprimirSeparador(MenuUtils.ANCHO);
+            System.out.print("Opción: ");
+            opcion = utils.leerEntero();
+        } while (opcion != 0);
     }
 
     /*
     Muestra los detalles de un usuario en pantalla.
+    Resuelve los IDs de seguidos a nombres usando buscarPorId.
     */
     private void mostrarDetalleCliente(Cliente cliente) {
         System.out.println("  ID: " + cliente.getId() + " | @" + cliente.getNombre());
         System.out.println("  Influencia: " + cliente.getScoring());
-        System.out.print("  Siguiendo: ");
-        
+        System.out.println("  Siguiendo (" + cliente.getCantidadSiguiendo() + "):");
+
         if (cliente.getCantidadSiguiendo() == 0) {
-            System.out.print("nadie");
+            System.out.println("    (nadie)");
         } else {
             int[] siguiendo = cliente.getSiguiendo();
             for (int i = 0; i < cliente.getCantidadSiguiendo(); i++) {
-                System.out.print(siguiendo[i] + (i < cliente.getCantidadSiguiendo()-1 ? ", " : ""));
+                Cliente seguido = gestor.buscarPorId(siguiendo[i]);
+                String nombre = (seguido != null) ? seguido.getNombre() : "Desconocido";
+                System.out.println("    - ID: " + siguiendo[i] + " | @" + nombre);
             }
         }
-        System.out.println();
     }
 }
