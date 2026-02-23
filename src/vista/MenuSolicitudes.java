@@ -54,8 +54,7 @@ public class MenuSolicitudes {
 
             switch (opcion) {
                 case 1:
-                    listarAmigos();
-                    pausar(scanner);
+                    mensaje = listarAmigos();
                     break;
                 case 2:
                     mensaje = gestionarSolicitudes();
@@ -68,40 +67,96 @@ public class MenuSolicitudes {
     }
 
     /*
-    Lista los amigos (usuarios seguidos) del usuario actual.
+    Lista los amigos (usuarios seguidos) del usuario actual con opción de dejar de seguir.
     */
-    private void listarAmigos() {
-        limpiarPantalla();
-        utils.mostrarCabecera("Inicio", "Amigos", "Mis Amigos");
-        
+    private String listarAmigos() {
+        int opcionAmigos;
+        String msg = "";
+
+        do {
+            limpiarPantalla();
+            utils.mostrarCabecera("Inicio", "Amigos", "Mis Amigos");
+
+            Sesion sesion = getSesion();
+            if (!sesion.estaAutenticado()) return "[ERROR] Error: no autenticado";
+
+            Cliente usuario = sesion.getUsuarioActual();
+            int[] siguiendo = usuario.getSiguiendo();
+            int cantidad = usuario.getCantidadSiguiendo();
+
+            if (cantidad == 0) {
+                System.out.println("[AVISO] No sigues a nadie aún.\n");
+                System.out.println(" 0. Volver");
+                imprimirSeparador(MenuUtils.ANCHO);
+            } else {
+                System.out.println("+------+--------------------+");
+                System.out.println("| ID   | Usuario            |");
+                System.out.println("+------+--------------------+");
+
+                for (int i = 0; i < cantidad; i++) {
+                    int idAmigo = siguiendo[i];
+                    Cliente amigo = gestor.buscarPorId(idAmigo);
+
+                    String idStr = String.format("%-4d", idAmigo);
+                    String nombreStr = (amigo != null) ? amigo.getNombre() : "Desconocido";
+                    nombreStr = String.format("%-18s", nombreStr);
+
+                    System.out.println("| " + idStr + " | " + nombreStr + " |");
+                }
+                System.out.println("+------+--------------------+");
+                System.out.println("\nTotal: " + cantidad + " amigos.\n");
+                System.out.println(" 1. Dejar de seguir");
+                System.out.println(" 0. Volver");
+                imprimirSeparador(MenuUtils.ANCHO);
+            }
+
+            if(!msg.isEmpty()) {
+                System.out.println(msg);
+                msg = "";
+            }
+
+            System.out.print("Opción: ");
+            opcionAmigos = utils.leerEntero();
+
+            if (opcionAmigos == 1 && cantidad > 0) {
+                msg = dejarDeSeguirAmigo();
+            }
+        } while (opcionAmigos != 0);
+
+        return "";
+    }
+
+    /*
+    Permite al usuario dejar de seguir a un amigo.
+    */
+    private String dejarDeSeguirAmigo() {
+        System.out.print("ID del amigo a dejar de seguir: ");
+        int idAmigo = utils.leerEntero();
+
         Sesion sesion = getSesion();
-        if (!sesion.estaAutenticado()) return;
-        
+        if (!sesion.estaAutenticado()) return "[ERROR] Error: no autenticado";
         Cliente usuario = sesion.getUsuarioActual();
-        int[] siguiendo = usuario.getSiguiendo();
-        int cantidad = usuario.getCantidadSiguiendo();
-        
-        if (cantidad == 0) {
-            imprimirAviso("No sigues a nadie aún.");
-            return;
+
+        // Validar que el ID esté en la lista de seguidos
+        boolean estaEnSiguiendo = false;
+        for (int id : usuario.getSiguiendo()) {
+            if (id == idAmigo) {
+                estaEnSiguiendo = true;
+                break;
+            }
         }
-        
-        System.out.println("+------+--------------------+");
-        System.out.println("| ID   | Usuario            |");
-        System.out.println("+------+--------------------+");
-        
-        for (int i = 0; i < cantidad; i++) {
-            int idAmigo = siguiendo[i];
-            Cliente amigo = gestor.buscarPorId(idAmigo);
-            
-            String idStr = String.format("%-4d", idAmigo);
-            String nombreStr = (amigo != null) ? amigo.getNombre() : "Desconocido";
-            nombreStr = String.format("%-18s", nombreStr);
-            
-            System.out.println("| " + idStr + " | " + nombreStr + " |");
+
+        if (!estaEnSiguiendo) {
+            return "[ERROR] No sigues a este usuario";
         }
-        System.out.println("+------+--------------------+");
-        System.out.println("\nTotal: " + cantidad + " amigos.");
+
+        Cliente amigo = gestor.buscarPorId(idAmigo);
+        if (amigo == null) {
+            return "[ERROR] Usuario no encontrado";
+        }
+
+        gestor.dejarDeSeguir(usuario.getId(), idAmigo);
+        return "[OK] Ya no sigues a @" + amigo.getNombre();
     }
 
     /*
@@ -113,23 +168,26 @@ public class MenuSolicitudes {
         do {
             limpiarPantalla();
             utils.mostrarCabecera("Inicio", "Amigos", "Solicitudes");
-            
+
             System.out.println(verSolicitudesPendientes());
             System.out.println();
-            System.out.println(" 1. Procesar siguiente");
+            System.out.println(" 1. Aceptar siguiente");
+            System.out.println(" 2. Rechazar siguiente");
             System.out.println(" 0. Volver");
             imprimirSeparador(MenuUtils.ANCHO);
-            
+
             if(!msg.isEmpty()) {
                 System.out.println(msg);
                 msg = "";
             }
-            
+
             System.out.print("Opción: ");
             opcionSolo = utils.leerEntero();
-            
+
             if (opcionSolo == 1) {
-                msg = procesarSolicitud();
+                msg = aceptarSolicitud();
+            } else if (opcionSolo == 2) {
+                msg = rechazarSolicitud();
             }
         } while (opcionSolo != 0);
         return "";
@@ -286,22 +344,73 @@ public class MenuSolicitudes {
     }
 
     /*
-    Busca usuarios por nivel de scoring/influencia.
+    Busca usuarios por nivel de scoring/influencia con paginación.
+    Muestra resultados de a PAGINA_SIZE (15) con navegación Anterior/Siguiente.
+
+    Complejidad: O(log 101 + k) para buscar, O(1) por página mostrada
     */
     private String buscarPorScoring() {
         System.out.print("Influencia (0-100): ");
         int scoring = utils.leerEntero();
-        
+
         Cliente[] encontrados = gestor.buscarPorScoring(scoring);
-        
-        if (encontrados.length == 0) return "[AVISO] Sin resultados";
-        
-        System.out.println();
-        for (Cliente c : encontrados) {
-            System.out.println(" - ID: " + c.getId() + " | " + c.getNombre());
-        }
-        System.out.println("\nTotal: " + encontrados.length);
-        pausar(scanner);
+
+        if (encontrados.length == 0) return "[AVISO] Sin resultados para influencia " + scoring;
+
+        int pagina = 0;
+        int totalPaginas = (encontrados.length + PAGINA_SIZE - 1) / PAGINA_SIZE;
+        int opcion;
+
+        do {
+            limpiarPantalla();
+            utils.mostrarCabecera("Inicio", "Amigos", "Explorar", "Influencia: " + scoring);
+
+            int desde = pagina * PAGINA_SIZE;
+            int hasta = Math.min(desde + PAGINA_SIZE, encontrados.length);
+
+            System.out.println("Clientes con influencia " + scoring + " (" + encontrados.length
+                + " encontrados) - Página " + (pagina + 1) + "/" + totalPaginas + "\n");
+            System.out.println("+------+--------------------+---------+");
+            System.out.println("| ID   | Usuario            | Influen |");
+            System.out.println("+------+--------------------+---------+");
+
+            for (int i = desde; i < hasta; i++) {
+                Cliente c = encontrados[i];
+                String idCol = String.format("%-4d", c.getId());
+                String nombreCol = String.format("%-18s", c.getNombre());
+                String scoreCol = String.format("%-7d", c.getScoring());
+                System.out.println("| " + idCol + " | " + nombreCol + "| " + scoreCol + "|");
+            }
+            System.out.println("+------+--------------------+---------+");
+
+            System.out.println();
+            if (pagina > 0) System.out.println(" 1. << Anterior");
+            if (pagina < totalPaginas - 1) System.out.println(" 2. Siguiente >>");
+            System.out.println(" 3. Agregar por ID");
+            System.out.println(" 0. Volver");
+            imprimirSeparador(MenuUtils.ANCHO);
+            System.out.print("Opción: ");
+            opcion = utils.leerEntero();
+
+            switch (opcion) {
+                case 1:
+                    if (pagina > 0) pagina--;
+                    break;
+                case 2:
+                    if (pagina < totalPaginas - 1) pagina++;
+                    break;
+                case 3:
+                    System.out.print("Ingrese ID para agregar (0 cancelar): ");
+                    int idSel = utils.leerEntero();
+                    if (idSel != 0) {
+                        Cliente sel = gestor.buscarPorId(idSel);
+                        if (sel != null) return enviarSolicitud(sel);
+                        return "[ERROR] ID no encontrado";
+                    }
+                    break;
+            }
+        } while (opcion != 0);
+
         return "";
     }
 
@@ -376,34 +485,56 @@ public class MenuSolicitudes {
     }
 
     /*
-    Procesa (acepta) la solicitud de seguimiento actual.
+    Acepta la solicitud de seguimiento actual.
     */
-    private String procesarSolicitud() {
+    private String aceptarSolicitud() {
         Sesion sesion = getSesion();
         if (!sesion.estaAutenticado()) return "[ERROR] Error: no autenticado";
         Cliente usuarioActual = sesion.getUsuarioActual();
-        
+
         SolicitudSeguimiento solicitud = usuarioActual.procesarSiguienteSolicitud();
         if (solicitud == null) return "[AVISO] No tienes solicitudes";
 
         try {
             int idSolicitante = Integer.parseInt(solicitud.getSolicitante());
             int idObjetivo = Integer.parseInt(solicitud.getObjetivo());
-            
+
             Cliente solicitante = gestor.buscarPorId(idSolicitante);
-            
+
             // Refactor: Usar método del gestor
             boolean resultado = solicitante != null && gestor.aceptarSolicitud(solicitante, usuarioActual, solicitud);
-            
+
             if (resultado) {
                 System.out.println("✅ ¡Solicitud aceptada!");
                 System.out.println("Ahora sigues a " + solicitante.getNombre());
-                return "[OK] Solicitud procesada."; 
+                return "[OK] Solicitud procesada.";
             } else {
                 return "[ERROR] No se pudo procesar (limite o error)";
             }
         } catch (Exception e) {
             return "[ERROR] Error procesando solicitud";
+        }
+    }
+
+    /*
+    Rechaza la solicitud de seguimiento actual sin crear la relación.
+    */
+    private String rechazarSolicitud() {
+        Sesion sesion = getSesion();
+        if (!sesion.estaAutenticado()) return "[ERROR] Error: no autenticado";
+        Cliente usuarioActual = sesion.getUsuarioActual();
+
+        SolicitudSeguimiento solicitud = usuarioActual.procesarSiguienteSolicitud();
+        if (solicitud == null) return "[AVISO] No tienes solicitudes";
+
+        try {
+            int idSolicitante = Integer.parseInt(solicitud.getSolicitante());
+            Cliente solicitante = gestor.buscarPorId(idSolicitante);
+            String nombreSolicitante = (solicitante != null) ? solicitante.getNombre() : "ID:" + idSolicitante;
+
+            return "[OK] Solicitud rechazada de @" + nombreSolicitante;
+        } catch (Exception e) {
+            return "[ERROR] Error rechazando solicitud";
         }
     }
     

@@ -1,8 +1,8 @@
 package vista;
 
 import modelo.Accion;
+import modelo.Cliente;
 import servicio.GestorClientes;
-import modelo.Sesion;
 import java.util.Scanner;
 import static vista.Terminal.*;
 
@@ -61,9 +61,9 @@ public class MenuHistorial {
 
     private String verUltimaAccion() {
         Accion accion = gestor.verUltimaAccion();
-        
+
         if (accion != null) {
-            return "Ultima accion: " + accion;
+            return "Ultima accion:\n  " + formatearAccion(accion);
         } else {
             return "[AVISO] Historial vacio";
         }
@@ -71,9 +71,9 @@ public class MenuHistorial {
 
     private String deshacerAccion() {
         Accion accion = gestor.deshacer();
-        
+
         if (accion != null) {
-            return "[OK] Deshecho: " + accion;
+            return "[OK] Deshecho:\n  " + formatearAccion(accion);
         } else {
             return "[AVISO] No hay acciones para deshacer";
         }
@@ -82,24 +82,113 @@ public class MenuHistorial {
     private void verHistorialCompleto() {
         limpiarPantalla();
         utils.mostrarCabecera("Inicio", "Historial", "Completo");
-        
+
         Accion[] acciones = gestor.obtenerHistorialCompleto();
-        
+
         if (acciones.length == 0) {
             imprimirAviso("El historial esta vacio");
             return;
         }
-        
+
         System.out.println("Mostrando desde la mas reciente a la mas antigua:");
         System.out.println();
-        
+
         for (int i = 0; i < acciones.length; i++) {
             Accion a = acciones[i];
             String marcador = (i == 0) ? "-> " : "  ";
-            System.out.println(marcador + (i + 1) + ". " + a);
+            System.out.println(marcador + (i + 1) + ". " + formatearAccion(a));
         }
-        
+
         System.out.println();
         System.out.println("Total: " + acciones.length + " acciones");
+    }
+
+    /*
+    Formatea una acción para mostrarla de forma más legible con nombres de usuarios
+    en lugar de solo IDs.
+    */
+    private String formatearAccion(Accion accion) {
+        String timestamp = String.format("[%s]", accion.getTimestamp().toLocalTime().withNano(0));
+        String[] datos = accion.getDatos();
+        String tipoAccion = accion.getTipo().name();
+        String descripcion = "";
+
+        switch (tipoAccion) {
+            case "AGREGAR_CLIENTE":
+                // datos: [id, nombre, scoring]
+                if (datos.length >= 3) {
+                    descripcion = "AGREGAR_CLIENTE: @" + datos[1] + " (ID: " + datos[0] + ", Influencia: " + datos[2] + ")";
+                } else {
+                    descripcion = tipoAccion + ": " + String.join(", ", datos);
+                }
+                break;
+
+            case "ELIMINAR_CLIENTE":
+                // datos: [id, nombre, scoring]
+                if (datos.length >= 3) {
+                    descripcion = "ELIMINAR_CLIENTE: @" + datos[1] + " (ID: " + datos[0] + ", Influencia: " + datos[2] + ")";
+                } else {
+                    descripcion = tipoAccion + ": " + String.join(", ", datos);
+                }
+                break;
+
+            case "SEGUIR":
+                // datos: [idSeguidor, idSeguido]
+                if (datos.length >= 2) {
+                    try {
+                        Cliente seguidor = gestor.buscarPorId(Integer.parseInt(datos[0]));
+                        Cliente seguido = gestor.buscarPorId(Integer.parseInt(datos[1]));
+                        String nomSeguidor = (seguidor != null) ? "@" + seguidor.getNombre() : "ID:" + datos[0];
+                        String nomSeguido = (seguido != null) ? "@" + seguido.getNombre() : "ID:" + datos[1];
+                        descripcion = "SEGUIR: " + nomSeguidor + " → " + nomSeguido;
+                    } catch (Exception e) {
+                        descripcion = tipoAccion + ": " + String.join(", ", datos);
+                    }
+                } else {
+                    descripcion = tipoAccion + ": " + String.join(", ", datos);
+                }
+                break;
+
+            case "DEJAR_DE_SEGUIR":
+                // datos: [idSeguidor, idSeguido]
+                if (datos.length >= 2) {
+                    try {
+                        Cliente seguidor = gestor.buscarPorId(Integer.parseInt(datos[0]));
+                        Cliente seguido = gestor.buscarPorId(Integer.parseInt(datos[1]));
+                        String nomSeguidor = (seguidor != null) ? "@" + seguidor.getNombre() : "ID:" + datos[0];
+                        String nomSeguido = (seguido != null) ? "@" + seguido.getNombre() : "ID:" + datos[1];
+                        descripcion = "DEJAR_DE_SEGUIR: " + nomSeguidor + " ✕ " + nomSeguido;
+                    } catch (Exception e) {
+                        descripcion = tipoAccion + ": " + String.join(", ", datos);
+                    }
+                } else {
+                    descripcion = tipoAccion + ": " + String.join(", ", datos);
+                }
+                break;
+
+            case "AGREGAR_CONEXION":
+            case "ELIMINAR_CONEXION":
+                // datos: [idA, idB]
+                if (datos.length >= 2) {
+                    try {
+                        Cliente clienteA = gestor.buscarPorId(Integer.parseInt(datos[0]));
+                        Cliente clienteB = gestor.buscarPorId(Integer.parseInt(datos[1]));
+                        String nomA = (clienteA != null) ? "@" + clienteA.getNombre() : "ID:" + datos[0];
+                        String nomB = (clienteB != null) ? "@" + clienteB.getNombre() : "ID:" + datos[1];
+                        String operador = tipoAccion.equals("AGREGAR_CONEXION") ? "↔" : "✕";
+                        descripcion = tipoAccion + ": " + nomA + " " + operador + " " + nomB;
+                    } catch (Exception e) {
+                        descripcion = tipoAccion + ": " + String.join(", ", datos);
+                    }
+                } else {
+                    descripcion = tipoAccion + ": " + String.join(", ", datos);
+                }
+                break;
+
+            default:
+                descripcion = tipoAccion + ": " + String.join(", ", datos);
+        }
+
+        return timestamp + " " + descripcion;
     }
 }
