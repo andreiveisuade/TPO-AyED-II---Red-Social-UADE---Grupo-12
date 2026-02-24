@@ -279,6 +279,58 @@ public class ArbolBinarioBusqueda<K extends Comparable<K>, V>
     }
 
     /*
+    Genera una representación visual del árbol en formato texto.
+    Muestra la estructura jerárquica con líneas de conexión,
+    las claves de cada nodo y su nivel en el árbol.
+
+    Ejemplo de salida:
+        [70]  (Nivel 0)
+        ├── [40]  (Nivel 1)
+        │   └── [40]  (Nivel 2)
+        └── [90]  (Nivel 1)
+            └── [85]  (Nivel 2)
+
+    Complejidad: O(N) — recorre todos los nodos una vez (preorden).
+    */
+    public String representarArbol() {
+        if (raiz == null) return "(árbol vacío)\n";
+        StringBuilder sb = new StringBuilder();
+        representarNodo(raiz, sb, "", true, 0, true);
+        return sb.toString();
+    }
+
+    /*
+    Método auxiliar recursivo para representar cada nodo.
+    Usa recorrido PREORDEN (raíz → izquierdo → derecho) para imprimir.
+    */
+    private void representarNodo(NodoABB<K, V> nodo, StringBuilder sb,
+                                  String prefijo, boolean esUltimo,
+                                  int nivel, boolean esRaiz) {
+        sb.append(prefijo);
+
+        if (!esRaiz) {
+            sb.append(esUltimo ? "└── " : "├── ");
+        }
+
+        sb.append("[").append(nodo.getClave()).append("] ");
+        sb.append(nodo.getValor());
+        sb.append("  (Nivel ").append(nivel).append(")");
+        sb.append("\n");
+
+        String nuevoPrefijo = prefijo + (esRaiz ? "" : (esUltimo ? "    " : "│   "));
+
+        boolean tieneIzq = nodo.getIzquierdo() != null;
+        boolean tieneDer = nodo.getDerecho() != null;
+
+        if (tieneIzq) {
+            representarNodo(nodo.getIzquierdo(), sb, nuevoPrefijo, !tieneDer, nivel + 1, false);
+        }
+        if (tieneDer) {
+            representarNodo(nodo.getDerecho(), sb, nuevoPrefijo, true, nivel + 1, false);
+        }
+    }
+
+    /*
     Convierte una Cola propia a Object[].
     Complejidad: O(k) donde k = cantidad de elementos en la cola.
     */

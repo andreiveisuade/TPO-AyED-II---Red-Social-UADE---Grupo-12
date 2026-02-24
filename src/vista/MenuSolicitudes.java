@@ -560,16 +560,36 @@ public class MenuSolicitudes {
         }
 
         int idUsuario = sesion.getUsuarioActual().getId();
-        Cliente[] clientes = gestor.obtenerSeguidoresEnNivel(idUsuario, 3);
 
-        if (clientes.length == 0) {
-            imprimirAviso("No hay seguidores en el cuarto nivel del ABB de @"
-                + sesion.getUsuarioActual().getNombre() + ".");
+        // Construir el ABB y mostrarlo visualmente
+        tda.ArbolBinarioBusqueda<Integer, Cliente> arbol = gestor.construirArbolRelaciones(idUsuario);
+
+        if (arbol.estaVacio()) {
+            imprimirAviso("@" + sesion.getUsuarioActual().getNombre() + " no tiene seguidores.");
             return;
         }
 
+        System.out.println("ABB de seguidores de @" + sesion.getUsuarioActual().getNombre()
+            + " (ordenado por scoring):\n");
+        System.out.println(arbol.representarArbol());
+        System.out.println("Altura del arbol: " + arbol.getAltura()
+            + " | Total nodos: " + arbol.getCantidad());
+        imprimirSeparador(MenuUtils.ANCHO);
+
+        // Obtener nivel 4 (índice 3)
+        Object[] resultadosNivel = arbol.obtenerEnNivel(3);
+
+        if (resultadosNivel.length == 0) {
+            imprimirAviso("No hay seguidores en el cuarto nivel (Nivel 3).");
+            return;
+        }
+
+        Cliente[] clientes = new Cliente[resultadosNivel.length];
+        for (int i = 0; i < resultadosNivel.length; i++) {
+            clientes[i] = (Cliente) resultadosNivel[i];
+        }
+
         // Ordenar por cantidad de seguidores (mayor a menor) - Selection Sort
-        // Con ABB por usuario, el array es pequeño → O(m²) con m chico es aceptable
         for (int i = 0; i < clientes.length - 1; i++) {
             int maxIdx = i;
             for (int j = i + 1; j < clientes.length; j++) {
@@ -584,8 +604,7 @@ public class MenuSolicitudes {
             }
         }
 
-        System.out.println("Seguidores de @" + sesion.getUsuarioActual().getNombre()
-            + " en el cuarto nivel del ABB (por scoring):\n");
+        System.out.println("\nSeguidores en el cuarto nivel (Nivel 3):\n");
         System.out.println("+------+--------------------+---------+------------+");
         System.out.println("| ID   | Usuario            | Scoring | Seguidores |");
         System.out.println("+------+--------------------+---------+------------+");

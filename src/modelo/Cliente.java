@@ -186,8 +186,18 @@ public class Cliente {
         return siguiendo.contiene(idObjetivo);
     }
 
+    /*
+    Representación compacta: usada por el ABB al imprimir el árbol.
+    */
     @Override
     public String toString() {
+        return nombre + " (ID:" + id + ")";
+    }
+
+    /*
+    Representación detallada con toda la información del cliente.
+    */
+    public String toStringDetallado() {
         StringBuilder sb = new StringBuilder();
         sb.append("ID: ").append(id);
         sb.append(" | Cliente: ").append(nombre);
