@@ -10,22 +10,24 @@ skinparam packageFontStyle bold
 title **Diagrama de Arquitectura - Red Social UADE**\nArquitectura en Capas (Singleton + Lazy Loading)
 
 ' ==========================================
-' CAPA DE PRESENTACIÓN (VISTA)
+' CAPA DE PRESENTACION (VISTA)
 ' ==========================================
 package "Capa Vista" as vista #E3F2FD {
     component [Menu\n<font size="10">Coordinador Principal</font>] as menu #BBDEFB
-    component [MenuSolicitudes\n<font size="10">Menú Unificado</font>\n<font size="9" color="gray">Amigos + Explorar + Solicitudes</font>] as menuSolicitudes #BBDEFB
+    component [MenuSolicitudes\n<font size="10">Menu Unificado</font>\n<font size="9" color="gray">Amigos + Explorar + Solicitudes</font>\n<font size="9" color="gray">+ Amistades + Distancia (Iter 3)</font>] as menuSolicitudes #BBDEFB
     component [MenuHistorial\n<font size="10">Historial/Undo/Redo</font>] as menuHistorial #BBDEFB
     component [Terminal\n<font size="10">Utilidades UI</font>] as terminal #90CAF9
     component [MenuUtils\n<font size="10">Entrada/Salida</font>] as menuUtils #90CAF9
 }
 
 ' ==========================================
-' CAPA DE LÓGICA DE NEGOCIO (SERVICIOS)
+' CAPA DE LOGICA DE NEGOCIO (SERVICIOS)
 ' ==========================================
 package "Capa Servicio" as servicio #E8F5E9 {
-    component [GestorClientes\n<font size="10">Coordinador Central</font>\n<font size="9" color="gray">CRUD + Undo/Redo</font>] as gestor #A5D6A7
-    component [IndiceClientes\n<font size="10">Índices Secundarios</font>\n<font size="9" color="gray">Nombre + Scoring</font>] as indiceClientes #A5D6A7
+    component [GestorClientes\n<font size="10">Coordinador Central</font>\n<font size="9" color="gray">CRUD + Undo/Redo</font>\n<font size="9" color="gray">+ Amistades + Distancia (Iter 3)</font>] as gestor #A5D6A7
+    component [IndiceClientes\n<font size="10">Indices Secundarios</font>\n<font size="9" color="gray">Nombre + Scoring</font>] as indiceClientes #A5D6A7
+    component [GestorRelaciones\n<font size="10">Relaciones y Grafos</font>\n<font size="9" color="gray">Seguimientos + ABB</font>\n<font size="9" color="gray">+ BFS + Amistades (Iter 3)</font>] as gestorRelaciones #A5D6A7
+    component [PersistenciaClientes\n<font size="10">JSON I/O</font>\n<font size="9" color="gray">Carga Inicial / Guardado Final</font>\n<font size="9" color="gray">+ DTO amistades (Iter 3)</font>] as persistencia #A5D6A7
     component [HistorialAcciones\n<font size="10">Wrapper de Pila</font>] as historialAcciones #A5D6A7
 }
 
@@ -33,9 +35,9 @@ package "Capa Servicio" as servicio #E8F5E9 {
 ' CAPA DE MODELO (ENTIDADES DE DOMINIO)
 ' ==========================================
 package "Capa Modelo" as modelo #FFF3E0 {
-    component [<<Singleton>>\nSesion\n<font size="10">Estado de Usuario</font>\n<font size="9" color="gray">+ Historial por sesión</font>] as sesion #FFB74D
-    component [Cliente\n<font size="10">Entidad Principal</font>\n<font size="9" color="gray">+ Cola de solicitudes</font>] as cliente #FFCC80
-    component [Accion\n<font size="10">Registro de Operación</font>] as accion #FFCC80
+    component [<<Singleton>>\nSesion\n<font size="10">Estado de Usuario</font>\n<font size="9" color="gray">+ Historial por sesion</font>] as sesion #FFB74D
+    component [Cliente\n<font size="10">Entidad Principal</font>\n<font size="9" color="gray">+ Cola solicitudes</font>\n<font size="9" color="gray">+ Dict amistades (Iter 3)</font>] as cliente #FFCC80
+    component [Accion\n<font size="10">Registro de Operacion</font>] as accion #FFCC80
     component [SolicitudSeguimiento\n<font size="10">Value Object</font>] as solicitud #FFCC80
     component [TipoAccion\n<font size="10"><<enum>></font>] as tipoAccion #FFE0B2
 }
@@ -45,7 +47,7 @@ package "Capa Modelo" as modelo #FFF3E0 {
 ' ==========================================
 package "Capa TDA" as tda #F3E5F5 {
     component [Diccionario<K,V>\n<font size="10">Hash Table O(1)</font>] as diccionario #CE93D8
-    component [ABB<K,V>\n<font size="10">BST O(log 101+k)</font>\n<font size="9" color="gray">Cola por nodo, máx 101</font>] as abb #CE93D8
+    component [ABB<K,V>\n<font size="10">BST O(log 101+k)</font>\n<font size="9" color="gray">Cola por nodo, max 101</font>] as abb #CE93D8
     component [Pila<T>\n<font size="10">LIFO Stack O(1)</font>] as pila #CE93D8
     component [Cola<T>\n<font size="10">FIFO Queue O(1)</font>] as cola #CE93D8
 }
@@ -58,10 +60,10 @@ database "clientes_1M.json" as jsonFile #FFCDD2
 ' ==========================================
 ' RELACIONES ENTRE CAPAS
 ' ==========================================
-' Main → Vista
+' Main -> Vista
 [Main] --> menu : iniciar()
 
-' Composición dentro de Vista
+' Composicion dentro de Vista
 menu --> menuSolicitudes : delega
 menu --> menuHistorial : delega
 menuSolicitudes ..> terminal : usa
@@ -69,10 +71,10 @@ menuHistorial ..> terminal : usa
 menuSolicitudes ..> menuUtils : usa
 menuHistorial ..> menuUtils : usa
 
-' Vista → Servicio (sin pasar Sesion como parámetro)
+' Vista -> Servicio (sin pasar Sesion como parametro)
 menu --> gestor : CRUD clientes
 menu ..> sesion : "Sesion.getInstancia()"
-menuSolicitudes --> gestor
+menuSolicitudes --> gestor : "CRUD + amistades\n+ distancia"
 menuSolicitudes ..> sesion : "Sesion.getInstancia()"
 menuHistorial --> gestor : undo/redo
 menuHistorial ..> sesion : "Sesion.getInstancia()"
@@ -82,50 +84,64 @@ gestor ..> sesion : "Sesion.getInstancia()\npara undo/redo"
 gestor --> cliente : crea/gestiona
 gestor --> accion : crea para registrar
 
+' GestorClientes delega a servicios
+gestor --> indiceClientes : "delega busquedas"
+gestor --> gestorRelaciones : "delega relaciones\n+ BFS + amistades"
+gestor --> persistencia : "delega I/O JSON"
+
 ' Modelo interno
 sesion --> cliente : "usuarioActual"
-sesion --> historialAcciones : "historial de sesión"
+sesion --> historialAcciones : "historial de sesion"
 cliente --> solicitud : "cola interna"
 cliente --> cola : "solicitudesPendientes"
 accion --> tipoAccion : tipo
 
-' Servicio → IndiceClientes
-gestor --> indiceClientes : "delega búsquedas"
+' Servicio -> TDA
 indiceClientes --> diccionario : "indiceNombre<String, Cola>"
 indiceClientes --> abb : "indiceScoring<Int, Cola>"
-
-' Servicio → TDA
 gestor --> diccionario : "clientes<ID, Cliente>"
+gestorRelaciones ..> cola : "BFS: cola de recorrido"
+gestorRelaciones ..> diccionario : "BFS: visitados"
 historialAcciones --> pila : "Pila<Accion>"
 
-' Persistencia (Simulada Directa)
-gestor --> jsonFile : "Lee al inicio\nEscribe al salir"
+' Persistencia
+persistencia --> jsonFile : "Lee al inicio\nEscribe al salir"
 
 ' ==========================================
 ' NOTAS
 ' ==========================================
 note right of sesion
-    <b>Patrón Singleton:</b>
+    <b>Patron Singleton:</b>
     Sesion.getInstancia()
-    Garantiza única instancia.
+    Garantiza unica instancia.
     Vista y Servicio acceden
-    sin pasarla como parámetro.
+    sin pasarla como parametro.
 end note
 
 note right of menuSolicitudes
-    <b>Menú Unificado:</b>
+    <b>Menu Unificado:</b>
     1. Mis Amigos (siguiendo)
     2. Solicitudes (pendientes)
     3. Explorar (buscar/listar)
+    4. Amistades (bidireccionales)
+    5. Calcular Distancia (BFS)
+end note
+
+note bottom of gestorRelaciones
+    <b>Iter 3 - Nuevos algoritmos:</b>
+    - calcularDistancia(): BFS O(V+E)
+      usa Cola (recorrido) + Diccionario (visitados)
+    - Amistades: bidireccionales O(1)
+      usa Diccionario<Integer, Boolean> en Cliente
 end note
 
 legend bottom
     |= Color |= Capa |= Responsabilidad |
-    | <#E3F2FD> | Vista | UI y coordinación |
-    | <#E8F5E9> | Servicio | Lógica de negocio |
+    | <#E3F2FD> | Vista | UI y coordinacion |
+    | <#E8F5E9> | Servicio | Logica de negocio |
     | <#FFF3E0> | Modelo | Entidades y estado (Singleton) |
     | <#F3E5F5> | TDA | Estructuras O(1) |
-    | <#FFEBEE> | Persistencia | Lazy Loading |
+    | <#FFEBEE> | Persistencia | JSON Load/Save |
 end legend
 
 @enduml

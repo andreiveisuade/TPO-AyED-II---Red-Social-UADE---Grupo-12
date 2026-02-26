@@ -41,6 +41,8 @@ public class MenuSolicitudes {
             System.out.println(" 1. Mis Amigos (Siguiendo)");
             System.out.println(" 2. Solicitudes (Pendientes)");
             System.out.println(" 3. Explorar / Buscar usuarios");
+            System.out.println(" 4. Amistades (bidireccionales)");
+            System.out.println(" 5. Calcular Distancia (BFS)");
             System.out.println(" 0. <- Volver");
             imprimirSeparador(MenuUtils.ANCHO);
             
@@ -61,6 +63,12 @@ public class MenuSolicitudes {
                     break;
                 case 3:
                     mensaje = menuExplorar();
+                    break;
+                case 4:
+                    mensaje = menuAmistades();
+                    break;
+                case 5:
+                    mensaje = calcularDistancia();
                     break;
             }
         } while (opcion != 0);
@@ -623,6 +631,203 @@ public class MenuSolicitudes {
             System.out.println("Mayor influencia: " + clientes[0].getNombre()
                 + " (" + clientes[0].getCantidadSeguidores() + " seguidores)");
         }
+    }
+
+    /*
+    ══════════════════════════════════════════════════════════
+    ITERACIÓN 3: AMISTADES (RELACIONES BIDIRECCIONALES)
+    ══════════════════════════════════════════════════════════
+    */
+
+    /*
+    Submenú para gestionar amistades bidireccionales.
+    Permite ver, agregar y eliminar amistades.
+    */
+    private String menuAmistades() {
+        int opcion;
+        String msg = "";
+        do {
+            limpiarPantalla();
+            utils.mostrarCabecera("Inicio", "Amigos", "Amistades");
+
+            Sesion sesion = getSesion();
+            if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
+            Cliente usuario = sesion.getUsuarioActual();
+
+            // Mostrar amigos actuales
+            Cliente[] amigos = gestor.obtenerAmigos(usuario.getId());
+            int cantAmigos = gestor.obtenerCantidadAmigos(usuario.getId());
+
+            if (cantAmigos == 0) {
+                System.out.println("[AVISO] No tienes amistades aun.\n");
+            } else {
+                System.out.println("+------+--------------------+---------+");
+                System.out.println("| ID   | Amigo              | Scoring |");
+                System.out.println("+------+--------------------+---------+");
+                for (Cliente amigo : amigos) {
+                    if (amigo != null) {
+                        String idCol = String.format("%-4d", amigo.getId());
+                        String nombreCol = String.format("%-18s", amigo.getNombre());
+                        String scoreCol = String.format("%-7d", amigo.getScoring());
+                        System.out.println("| " + idCol + " | " + nombreCol + "| " + scoreCol + "|");
+                    }
+                }
+                System.out.println("+------+--------------------+---------+");
+                System.out.println("Total: " + cantAmigos + " amigo(s).\n");
+            }
+
+            System.out.println(" 1. Agregar amistad");
+            System.out.println(" 2. Eliminar amistad");
+            System.out.println(" 0. Volver");
+            imprimirSeparador(MenuUtils.ANCHO);
+
+            if (!msg.isEmpty()) {
+                System.out.println(msg);
+                msg = "";
+            }
+
+            System.out.print("Opcion: ");
+            opcion = utils.leerEntero();
+
+            switch (opcion) {
+                case 1:
+                    msg = agregarAmistad();
+                    break;
+                case 2:
+                    msg = eliminarAmistad();
+                    break;
+            }
+        } while (opcion != 0);
+        return "";
+    }
+
+    /*
+    Agrega una amistad bidireccional entre el usuario actual y otro cliente.
+    */
+    private String agregarAmistad() {
+        Sesion sesion = getSesion();
+        if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
+
+        System.out.print("ID del usuario para ser amigos: ");
+        int idAmigo = utils.leerEntero();
+
+        if (idAmigo == sesion.getUsuarioActual().getId()) {
+            return "[ERROR] No puedes ser amigo de ti mismo";
+        }
+
+        Cliente amigo = gestor.buscarPorId(idAmigo);
+        if (amigo == null) {
+            return "[ERROR] ID " + idAmigo + " no encontrado";
+        }
+
+        if (gestor.sonAmigos(sesion.getUsuarioActual().getId(), idAmigo)) {
+            return "[AVISO] Ya son amigos";
+        }
+
+        boolean resultado = gestor.agregarAmistad(sesion.getUsuarioActual().getId(), idAmigo);
+        if (resultado) {
+            return "[OK] Ahora eres amigo de @" + amigo.getNombre() + " (bidireccional)";
+        }
+        return "[ERROR] No se pudo agregar la amistad";
+    }
+
+    /*
+    Elimina una amistad bidireccional entre el usuario actual y otro cliente.
+    */
+    private String eliminarAmistad() {
+        Sesion sesion = getSesion();
+        if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
+
+        System.out.print("ID del amigo a eliminar: ");
+        int idAmigo = utils.leerEntero();
+
+        Cliente amigo = gestor.buscarPorId(idAmigo);
+        if (amigo == null) {
+            return "[ERROR] ID " + idAmigo + " no encontrado";
+        }
+
+        if (!gestor.sonAmigos(sesion.getUsuarioActual().getId(), idAmigo)) {
+            return "[AVISO] No son amigos";
+        }
+
+        boolean resultado = gestor.eliminarAmistad(sesion.getUsuarioActual().getId(), idAmigo);
+        if (resultado) {
+            return "[OK] Amistad eliminada con @" + amigo.getNombre() + " (ambos lados)";
+        }
+        return "[ERROR] No se pudo eliminar la amistad";
+    }
+
+    /*
+    ══════════════════════════════════════════════════════════
+    ITERACIÓN 3: CALCULAR DISTANCIA (BFS)
+    ══════════════════════════════════════════════════════════
+    */
+
+    /*
+    Calcula la distancia (saltos) entre dos clientes usando BFS.
+    Muestra el resultado con detalle visual.
+    */
+    private String calcularDistancia() {
+        limpiarPantalla();
+        utils.mostrarCabecera("Inicio", "Amigos", "Distancia BFS");
+
+        Sesion sesion = getSesion();
+        if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
+
+        System.out.println("Calcula el numero de saltos entre dos clientes");
+        System.out.println("en el grafo dirigido de seguimientos.\n");
+
+        System.out.print("ID origen (0 = tu ID " + sesion.getUsuarioActual().getId() + "): ");
+        int idOrigen = utils.leerEntero();
+        if (idOrigen == 0) idOrigen = sesion.getUsuarioActual().getId();
+
+        System.out.print("ID destino: ");
+        int idDestino = utils.leerEntero();
+
+        // Validar que existan
+        Cliente origen = gestor.buscarPorId(idOrigen);
+        Cliente destino = gestor.buscarPorId(idDestino);
+
+        if (origen == null) {
+            System.out.println("\n[ERROR] ID origen " + idOrigen + " no existe.");
+            pausar(scanner);
+            return "";
+        }
+        if (destino == null) {
+            System.out.println("\n[ERROR] ID destino " + idDestino + " no existe.");
+            pausar(scanner);
+            return "";
+        }
+
+        // Calcular distancia
+        long inicio = System.nanoTime();
+        int distancia = gestor.calcularDistancia(idOrigen, idDestino);
+        long tiempoNs = System.nanoTime() - inicio;
+
+        // Mostrar resultado
+        System.out.println();
+        System.out.println("+-------------------------------------------+");
+        System.out.println("|         RESULTADO BFS - DISTANCIA          |");
+        System.out.println("+-------------------------------------------+");
+        System.out.println("| Origen:  " + String.format("%-33s", "@" + origen.getNombre() + " (ID:" + idOrigen + ")") + "|");
+        System.out.println("| Destino: " + String.format("%-33s", "@" + destino.getNombre() + " (ID:" + idDestino + ")") + "|");
+        System.out.println("+-------------------------------------------+");
+
+        if (distancia == 0) {
+            System.out.println("| Distancia: 0 (mismo cliente)               |");
+        } else if (distancia == -1) {
+            System.out.println("| Distancia: SIN CAMINO                      |");
+            System.out.println("| No existe ruta dirigida entre ellos.        |");
+        } else {
+            System.out.println("| Distancia: " + String.format("%-31s", distancia + " salto(s)") + "|");
+        }
+
+        System.out.println("| Tiempo BFS: " + String.format("%-30s", String.format("%.3f ms", tiempoNs / 1_000_000.0)) + "|");
+        System.out.println("+-------------------------------------------+");
+
+        System.out.println();
+        pausar(scanner);
+        return "";
     }
 
     /*

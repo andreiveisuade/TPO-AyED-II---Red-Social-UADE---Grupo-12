@@ -33,24 +33,36 @@ class Cliente {
     - nombre: String
     - scoring: int
     - siguiendo: Diccionario<Integer, Boolean>
+    - seguidores: Diccionario<Integer, Boolean>
+    - amistades: Diccionario<Integer, Boolean>
     - solicitudesPendientes: Cola<SolicitudSeguimiento>
+    - cacheSiguiendo: int[]
+    - cacheSeguidores: int[]
     __
     + seguir(idObjetivo: int): boolean
     + dejarDeSeguir(idObjetivo: int): boolean
+    + agregarSeguidor(int): void
+    + eliminarSeguidor(int): void
     + recibirSolicitud(solicitud: SolicitudSeguimiento): void
     + procesarSiguienteSolicitud(): SolicitudSeguimiento
     + getCantidadSolicitudesPendientes(): int
-    - validarLimiteSeguidores(): boolean
+    __
+    <color:teal>Iter 3 - Amistades:</color>
+    + agregarAmistad(int): boolean
+    + eliminarAmistad(int): boolean
+    + obtenerAmigos(): int[]
+    + getCantidadAmigos(): int
+    + esAmigoDE(int): boolean
 }
 
 ' ==========================================
-' SERVICIO - GestorClientes
+' SERVICIO - GestorClientes (Coordinador)
 ' ==========================================
 class GestorClientes {
     - clientes: Diccionario<Integer, Cliente>
-    - indiceScoring: ABB<Integer, Cola<Cliente>>
-    - indiceNombre: Diccionario<String, Cola<Cliente>>
-    - scoringIndexConstructed: boolean
+    - indices: IndiceClientes
+    - gestorRelaciones: GestorRelaciones
+    - persistencia: PersistenciaClientes
     - proximoId: int
     __
     + agregarCliente(nombre: String, scoring: int): int
@@ -59,10 +71,66 @@ class GestorClientes {
     + buscarPorScoring(scoring: int): Cliente[]
     + eliminarCliente(id: int): boolean
     __
-    <color:blue>Uso de Singleton Sesion:</color>
-    + seguir(idSol: int, idObj: int): boolean
-    + dejarDeSeguir(idSol: int, idObj: int): boolean
+    <color:blue>Relaciones (delega):</color>
+    + seguir(int, int): boolean
+    + dejarDeSeguir(int, int): boolean
     + deshacer(): Accion
+    __
+    <color:teal>Iter 3 (delega a GestorRelaciones):</color>
+    + calcularDistancia(int, int): int
+    + agregarAmistad(int, int): boolean
+    + eliminarAmistad(int, int): boolean
+    + obtenerAmigos(int): Cliente[]
+    + sonAmigos(int, int): boolean
+}
+
+' ==========================================
+' SERVICIO - IndiceClientes
+' ==========================================
+class IndiceClientes {
+    - indiceScoring: ABB<Integer, Cola<Cliente>>
+    - indiceNombre: Diccionario<String, Cola<Cliente>>
+    - scoringIndexConstructed: boolean
+    __
+    + buscarPorNombre(String): Cliente[]
+    + buscarPorScoring(int): Cliente[]
+    + obtenerClientesEnNivel(int): Cliente[]
+}
+
+' ==========================================
+' SERVICIO - GestorRelaciones
+' ==========================================
+class GestorRelaciones {
+    - clientes: Diccionario<Integer, Cliente>
+    __
+    + seguir(int, int): boolean
+    + dejarDeSeguir(int, int): boolean
+    + obtenerVecinos(int): Cliente[]
+    + construirArbolRelaciones(int): ABB
+    + obtenerSeguidoresEnNivel(int, int): Cliente[]
+    __
+    <color:teal>Iter 3 - BFS:</color>
+    + calcularDistancia(int, int): int
+    __
+    <color:teal>Iter 3 - Amistades:</color>
+    + agregarAmistad(int, int): boolean
+    + eliminarAmistad(int, int): boolean
+    + obtenerAmigos(int): Cliente[]
+    + sonAmigos(int, int): boolean
+}
+
+' ==========================================
+' SERVICIO - PersistenciaClientes
+' ==========================================
+class PersistenciaClientes {
+    - archivoPath: String
+    __
+    + cargarDesdeArchivo(): Diccionario
+    + guardarCambios(Diccionario): void
+    __
+    <color:gray>DTO: id, nombre, scoring,</color>
+    <color:gray>siguiendo, seguidores,</color>
+    <color:gray>solicitudes, amistades</color>
 }
 
 ' ==========================================
@@ -80,40 +148,43 @@ class HistorialAcciones {
 }
 
 ' ==========================================
-' PERSISTENCIA
-' ==========================================
-class JsonLoader {
-    + cargarClientes(ruta: String): Cliente[]
-}
-
-' ==========================================
 ' RELACIONES
 ' ==========================================
 Sesion *-- "1" Cliente : usuarioActual
 Sesion *-- "1" HistorialAcciones : historial
 
-
 Cliente *-- "1" "Cola<SolicitudSeguimiento>" : solicitudesPendientes
-Cliente *-- "1" "Diccionario" : siguiendo
+Cliente *-- "3" "Diccionario" : "siguiendo +\nseguidores +\namistades"
 
 GestorClientes o-- "*" Cliente : gestiona
+GestorClientes --> IndiceClientes : "delega busquedas"
+GestorClientes --> GestorRelaciones : "delega relaciones\n+ BFS + amistades"
+GestorClientes --> PersistenciaClientes : "delega I/O"
 GestorClientes ..> Sesion : "accede via getInstancia()"
 
 ' ==========================================
 ' NOTAS
 ' ==========================================
 note bottom of GestorClientes
-    <b>Patrón Facade:</b>
-    Centraliza la lógica de negocio.
-    Usa Sesion.getInstancia() para
-    registrar acciones en el historial.
+    <b>Patron Facade:</b>
+    Centraliza la logica de negocio.
+    Delega a servicios especializados:
+    - IndiceClientes (busquedas)
+    - GestorRelaciones (relaciones + BFS)
+    - PersistenciaClientes (JSON)
 end note
 
 note right of Sesion
     <b>Singleton:</b>
-    Garantiza una única sesión
+    Garantiza una unica sesion
     accesible globalmente.
-    Dueña del historial de deshacer.
+    Duena del historial de deshacer.
+end note
+
+note right of GestorRelaciones
+    <b>Iter 3:</b>
+    - BFS usa Cola<Integer> + Diccionario visitados
+    - Amistades bidireccionales via Cliente.amistades
 end note
 
 @enduml
