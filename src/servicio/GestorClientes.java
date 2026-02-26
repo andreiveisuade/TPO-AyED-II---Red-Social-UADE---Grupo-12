@@ -381,6 +381,9 @@ public class GestorClientes {
         Cliente objetivo = clientes.obtener(idObjetivo);
 
         if (solicitante == null || objetivo == null) return false;
+        if (idSolicitante == idObjetivo) return false;
+        if (solicitante.sigueA(idObjetivo)) return false;
+        if (solicitante.getCantidadSiguiendo() >= Cliente.MAX_SEGUIDOS) return false;
 
         modelo.SolicitudSeguimiento solicitud = new modelo.SolicitudSeguimiento(
             String.valueOf(idSolicitante),
@@ -445,6 +448,16 @@ public class GestorClientes {
      */
     public int calcularDistancia(int idOrigen, int idDestino) {
         return gestorRelaciones.calcularDistancia(idOrigen, idDestino);
+    }
+
+    /**
+     * Obtiene el camino más corto entre dos clientes.
+     * Retorna array con IDs del camino, o vacío si no hay conexión.
+     * Delegado a GestorRelaciones.
+     * Complejidad: O(V + E)
+     */
+    public int[] obtenerCamino(int idOrigen, int idDestino) {
+        return gestorRelaciones.obtenerCamino(idOrigen, idDestino);
     }
 
     // ════════════════════════════════════════════════════════════════════════════════════

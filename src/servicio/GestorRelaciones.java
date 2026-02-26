@@ -303,6 +303,74 @@ public class GestorRelaciones {
         return -1;
     }
 
+    /**
+     * Obtiene el camino más corto entre dos clientes usando BFS.
+     * Retorna un array con los IDs del camino (origen incluido, destino incluido).
+     * Si no hay camino, retorna array vacío.
+     *
+     * Usa un Diccionario de "padres" para reconstruir la ruta:
+     * padre[B] = A significa "llegué a B desde A".
+     * Al encontrar el destino, se recorre hacia atrás con una Pila.
+     *
+     * Complejidad: O(V + E)
+     */
+    public int[] obtenerCamino(int idOrigen, int idDestino) {
+        if (clientes.obtener(idOrigen) == null || clientes.obtener(idDestino) == null) {
+            return new int[0];
+        }
+
+        if (idOrigen == idDestino) {
+            return new int[] { idOrigen };
+        }
+
+        tda.Cola<Integer> cola = new tda.Cola<>();
+        Diccionario<Integer, Integer> padre = new Diccionario<>();
+
+        cola.encolar(idOrigen);
+        padre.insertar(idOrigen, -1); // origen no tiene padre; -1 como centinela
+
+        boolean encontrado = false;
+
+        while (!cola.estaVacia() && !encontrado) {
+            int idActual = cola.desencolar();
+            Cliente actual = clientes.obtener(idActual);
+            if (actual == null) continue;
+
+            int[] vecinos = actual.getSiguiendo();
+            for (int idVecino : vecinos) {
+                if (idVecino == 0) continue;
+
+                if (!padre.contiene(idVecino)) {
+                    padre.insertar(idVecino, idActual);
+                    if (idVecino == idDestino) {
+                        encontrado = true;
+                        break;
+                    }
+                    cola.encolar(idVecino);
+                }
+            }
+        }
+
+        if (!encontrado) {
+            return new int[0];
+        }
+
+        // Reconstruir camino: desde destino hacia origen usando una Pila
+        tda.Pila<Integer> pila = new tda.Pila<>();
+        int actual = idDestino;
+        while (actual != -1) {
+            pila.apilar(actual);
+            Integer p = padre.obtener(actual);
+            actual = (p != null) ? p : -1;
+        }
+
+        int[] camino = new int[pila.getCantidad()];
+        for (int i = 0; i < camino.length; i++) {
+            camino[i] = pila.desapilar();
+        }
+        return camino;
+    }
+
     // ════════════════════════════════════════════════════════════════════════════════════
     // ITERACIÓN 3: AMISTADES (RELACIONES BIDIRECCIONALES)
     // ════════════════════════════════════════════════════════════════════════════════════

@@ -101,13 +101,9 @@ public class CU_013_EnviarSolicitud {
             Cliente alice = gestor.buscarPorId(1);
             sesion.iniciarSesion(alice);
 
-            // No puede enviar solicitud a sí mismo - debe lanzar excepción
-            try {
-                gestor.enviarSolicitud(1, 1);
-                assert false : "Debe lanzar excepción al intentar auto-solicitud";
-            } catch (IllegalArgumentException e) {
-                // Se espera esta excepción
-            }
+            // No puede enviar solicitud a sí mismo - debe retornar false
+            boolean resultado = gestor.enviarSolicitud(1, 1);
+            assert !resultado : "Auto-solicitud debe retornar false";
 
             reportarExito("No auto-solicitud");
         } catch (AssertionError e) {

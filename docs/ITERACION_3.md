@@ -30,6 +30,9 @@
 19. [Vistas: Visualizacion interactiva para el docente](#19-vistas)
 20. [Archivos modificados](#20-archivos-modificados)
 
+**Anexo: Base de Datos de Practica (15 clientes)**
+21. [Mapa de relaciones y ejercicios BFS](#21-mapa-de-relaciones)
+
 ---
 
 # CONTEXTO
@@ -1272,3 +1275,128 @@ datasets pequenos, no una estructura de datos del sistema.
 | `test/DistanciaTest.java` | 7 tests: mismo cliente, 1 hop, 2 hops, sin camino, inexistente, desconectado, dirigido |
 | `test/casos_de_uso/CU_028` a `CU_035` | 8 casos de uso de amistades + distancia |
 | `test/casos_de_uso/performance/PERF_004` | Validacion O(V+E) del BFS |
+
+---
+
+## 21. Mapa de Relaciones
+
+> Archivo: `data/clientes_iteracion_3.json` — 15 clientes, 24 seguimientos, 14 amistades, 5 solicitudes.
+> Validado contra todas las reglas de negocio (MAX_SEGUIDOS=2, MAX_AMIGOS=2, bidireccionalidad).
+
+### 21.1 Tabla de clientes
+
+| ID | Nombre | Scoring | Siguiendo | Seguidores | Amigos | Solicitudes pendientes |
+|----|--------|---------|-----------|------------|--------|------------------------|
+| 1  | Alice  | 90      | 2, 3      | 12         | 7, 10  | —                      |
+| 2  | Bob    | 42      | 4, 5      | 1          | 9, 14  | de Oscar(15)           |
+| 3  | Charlie| 71      | 6, 7      | 1          | 11, 15 | —                      |
+| 4  | Diana  | 18      | 6, 8      | 2          | 9, 12  | —                      |
+| 5  | Eva    | 83      | 9, 11     | 2          | 8, 13  | —                      |
+| 6  | Frank  | 55      | 8, 10     | 3, 4       | 11, 15 | de Julia(10)           |
+| 7  | Grace  | 97      | 11, 12    | 3          | 1, 14  | de Nora(14)            |
+| 8  | Hugo   | 29      | 10, 14    | 4, 6       | 5, 12  | de Kevin(11)           |
+| 9  | Ivan   | 64      | 13, 14    | 5          | 2, 4   | —                      |
+| 10 | Julia  | 36      | 15        | 6, 8       | 1, 13  | —                      |
+| 11 | Kevin  | 78      | 13        | 5, 7       | 3, 6   | —                      |
+| 12 | Laura  | 51      | 1, 14     | 7          | 4, 8   | de Marco(13)           |
+| 13 | Marco  | 12      | 15        | 9, 11      | 5, 10  | —                      |
+| 14 | Nora   | 88      | 15        | 8, 9, 12   | 2, 7   | —                      |
+| 15 | Oscar  | 45      | —         | 10, 13, 14 | 3, 6   | —                      |
+
+### 21.2 Grafo de seguimientos (dirigido)
+
+Todas las flechas indican "A sigue a B". Cada cliente sigue a maximo 2.
+
+```
+            12 ──→ 1 ──→ 2 ──→ 4 ──→ 6 ──→ 8 ──→ 10 ──→ 15
+            ↑      ↓      ↓      ↓            ↓      ↑      ↑
+            7 ←── 3      5      8 ──→ 14 ──→ 15     |      |
+            ↓             ↓                           |      |
+           11 ──→ 13 ──→ 15           9 ──→ 13 ──→ 15      |
+            ↑      ↑                   ↓                     |
+            5      9 ──→ 14 ──→ 15    |                     |
+                                       └── 14                |
+           12 ──→ 14 ──→ 15                                 |
+                                              6 ──→ 10 ─────┘
+```
+
+**Resumen de aristas dirigidas (24 total):**
+
+```
+1→2    2→4    3→6    4→6    5→9     6→8     7→11    8→10
+1→3    2→5    3→7    4→8    5→11    6→10    7→12    8→14
+                                    9→13    10→15   11→13
+                                    9→14    12→1    13→15
+                                            12→14   14→15
+```
+
+### 21.3 Grafo de amistades (no dirigido)
+
+Cada linea indica "A y B son amigos mutuamente". Cada cliente tiene maximo 2 amigos.
+
+```
+Grace(7) ── Alice(1) ── Julia(10) ── Marco(13) ── Eva(5) ── Hugo(8) ── Laura(12) ── Diana(4)
+  |                                                                                    |
+Nora(14) ── Bob(2) ── Ivan(9)                                                       Ivan(9)
+                         |
+                      Diana(4)
+
+Oscar(15) ── Frank(6) ── Kevin(11) ── Charlie(3) ── Oscar(15)
+```
+
+**Nota:** ningun par de amigos coincide con un par de seguimiento.
+Los grafos de seguimiento y amistad son 100% independientes.
+
+**Los 15 pares de amistad:**
+
+```
+1↔7    1↔10   2↔9    2↔14   3↔11   3↔15   4↔9    4↔12
+5↔8    5↔13   6↔11   6↔15   7↔14   8↔12   10↔13
+```
+
+### 21.4 Ejercicios de BFS (camino mas corto por seguimientos)
+
+Estos son los resultados que deberias obtener al ejecutar "Distancia BFS" en el sistema.
+El BFS recorre las aristas dirigidas de `siguiendo`.
+
+| Origen | Destino | Saltos | Camino que encuentra BFS |
+|--------|---------|--------|--------------------------|
+| Alice(1) | Oscar(15) | **4** | Alice→Charlie→Frank→Julia→Oscar (1→3→6→10→15) |
+| Alice(1) | Nora(14) | **4** | Alice→Bob→Diana→Hugo→Nora (1→2→4→8→14) |
+| Alice(1) | Marco(13) | **4** | Alice→Bob→Eva→Ivan→Marco (1→2→5→9→13) |
+| Alice(1) | Hugo(8) | **3** | Alice→Bob→Diana→Hugo (1→2→4→8) |
+| Laura(12) | Oscar(15) | **2** | Laura→Nora→Oscar (12→14→15) |
+| Grace(7) | Oscar(15) | **3** | Grace→Kevin→Marco→Oscar (7→11→13→15) |
+| Eva(5) | Oscar(15) | **3** | Eva→Ivan→Marco→Oscar (5→9→13→15) |
+| Oscar(15) | Alice(1) | **-1** | **No hay camino** (Oscar no sigue a nadie) |
+| Oscar(15) | Bob(2) | **-1** | **No hay camino** |
+| Alice(1) | Alice(1) | **0** | Mismo cliente |
+
+**Para pensar:**
+- ¿Por que Alice→Oscar es 4 y no 5? Porque existe el camino 1→3→6→10→15 (4 saltos, via Charlie→Frank→Julia) ademas del mas largo 1→2→4→8→10→15 (5 saltos). BFS siempre encuentra el mas corto.
+- ¿Por que Oscar→Alice es -1? Porque el grafo es **dirigido**: Oscar.siguiendo esta vacio, no tiene aristas de salida.
+- ¿Que pasa si Laura busca a Alice? Laura→Alice = 1 salto (12→1). Pero Alice→Laura por seguimientos es mas largo porque Alice no sigue directamente a Laura.
+
+### 21.5 Solicitudes pendientes
+
+| Destinatario | Solicitante | Si se acepta... |
+|-------------|-------------|-----------------|
+| Bob(2)      | Oscar(15)   | Oscar pasa a seguir a Bob. Oscar: 0→1 seguidos. Bob gana 1 seguidor. |
+| Frank(6)    | Julia(10)   | Julia pasa a seguir a Frank. Julia: 1→2 seguidos (alcanza MAX). |
+| Grace(7)    | Nora(14)    | Nora pasa a seguir a Grace. Nora: 1→2 seguidos (alcanza MAX). |
+| Hugo(8)     | Kevin(11)   | Kevin pasa a seguir a Hugo. Kevin: 1→2 seguidos (alcanza MAX). |
+| Laura(12)   | Marco(13)   | Marco pasa a seguir a Laura. Marco: 1→2 seguidos (alcanza MAX). |
+
+### 21.6 Verificacion de reglas de negocio
+
+| Regla | Estado |
+|-------|--------|
+| MAX_SEGUIDOS=2: ningun cliente sigue a mas de 2 | OK (todos ≤ 2) |
+| MAX_AMIGOS=2: ningun cliente tiene mas de 2 amigos | OK (todos = 2, excepto ninguno con mas) |
+| Seguidores sin limite: Oscar tiene 3 seguidores, Nora tiene 3 | OK |
+| Bidireccionalidad seguimientos: A.siguiendo[B] ↔ B.seguidores[A] | OK (24/24 pares verificados) |
+| Bidireccionalidad amistades: A.amistades[B] ↔ B.amistades[A] | OK (15/15 pares verificados) |
+| No auto-seguimiento ni auto-amistad | OK (0 violaciones) |
+| Solicitudes validas: solicitante tiene espacio y no ya sigue al destino | OK (5/5 validas) |
+| Scoring en rango 0-100 | OK (min=12 Marco, max=97 Grace) |
+| Independencia de grafos: ningun par de amigos coincide con seguimiento | OK (0/15 coincidencias) |

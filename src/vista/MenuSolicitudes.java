@@ -36,12 +36,12 @@ public class MenuSolicitudes {
         String mensaje = "";
         do {
             limpiarPantalla();
-            utils.mostrarCabecera("Inicio", "Amigos & Red Social");
-            
-            System.out.println(" 1. Mis Amigos (Siguiendo)");
+            utils.mostrarCabecera("Inicio", "Red Social");
+
+            System.out.println(" 1. Siguiendo (grafo dirigido)");
             System.out.println(" 2. Solicitudes (Pendientes)");
             System.out.println(" 3. Explorar / Buscar usuarios");
-            System.out.println(" 4. Amistades (bidireccionales)");
+            System.out.println(" 4. Amistades (grafo no dirigido)");
             System.out.println(" 5. Calcular Distancia (BFS)");
             System.out.println(" 6. Visualizar Grafo (Matriz de Adyacencia)");
             System.out.println(" 0. Volver");
@@ -79,7 +79,7 @@ public class MenuSolicitudes {
     }
 
     /*
-    Lista los amigos (usuarios seguidos) del usuario actual con opción de dejar de seguir.
+    Lista los usuarios que el cliente actual sigue (grafo dirigido: aristas de salida).
     */
     private String listarAmigos() {
         int opcionAmigos;
@@ -87,7 +87,7 @@ public class MenuSolicitudes {
 
         do {
             limpiarPantalla();
-            utils.mostrarCabecera("Inicio", "Amigos", "Mis Amigos");
+            utils.mostrarCabecera("Inicio", "Red Social", "Siguiendo");
 
             Sesion sesion = getSesion();
             if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
@@ -116,7 +116,7 @@ public class MenuSolicitudes {
                     System.out.println("| " + idStr + " | " + nombreStr + " |");
                 }
                 System.out.println("+------+--------------------+");
-                System.out.println("\nTotal: " + cantidad + " amigos.\n");
+                System.out.println("\nTotal: " + cantidad + " seguido(s).\n");
                 System.out.println(" 1. Dejar de seguir");
                 System.out.println(" 0. Volver");
                 imprimirSeparador(MenuUtils.ANCHO);
@@ -139,10 +139,10 @@ public class MenuSolicitudes {
     }
 
     /*
-    Permite al usuario dejar de seguir a un amigo.
+    Permite al usuario dejar de seguir a otro usuario.
     */
     private String dejarDeSeguirAmigo() {
-        System.out.print("ID del amigo a dejar de seguir: ");
+        System.out.print("ID del usuario a dejar de seguir: ");
         int idAmigo = utils.leerEntero();
 
         Sesion sesion = getSesion();
@@ -179,7 +179,7 @@ public class MenuSolicitudes {
         String msg = "";
         do {
             limpiarPantalla();
-            utils.mostrarCabecera("Inicio", "Amigos", "Solicitudes");
+            utils.mostrarCabecera("Inicio", "Red Social", "Solicitudes");
 
             System.out.println(verSolicitudesPendientes());
             System.out.println();
@@ -213,7 +213,7 @@ public class MenuSolicitudes {
         String msg = "";
         do {
             limpiarPantalla();
-            utils.mostrarCabecera("Inicio", "Amigos", "Explorar");
+            utils.mostrarCabecera("Inicio", "Red Social", "Explorar");
             
             System.out.println(" 1. Buscar por ID (y agregar)");
             System.out.println(" 2. Buscar por Nombre (y agregar)");
@@ -304,7 +304,7 @@ public class MenuSolicitudes {
 
         do {
             limpiarPantalla();
-            utils.mostrarCabecera("Inicio", "Amigos", "Explorar", "Buscar: " + nombre);
+            utils.mostrarCabecera("Inicio", "Red Social", "Explorar", "Buscar: " + nombre);
 
             int desde = pagina * PAGINA_SIZE;
             int hasta = Math.min(desde + PAGINA_SIZE, clientes.length);
@@ -375,7 +375,7 @@ public class MenuSolicitudes {
 
         do {
             limpiarPantalla();
-            utils.mostrarCabecera("Inicio", "Amigos", "Explorar", "Influencia: " + scoring);
+            utils.mostrarCabecera("Inicio", "Red Social", "Explorar", "Influencia: " + scoring);
 
             int desde = pagina * PAGINA_SIZE;
             int hasta = Math.min(desde + PAGINA_SIZE, encontrados.length);
@@ -458,17 +458,16 @@ public class MenuSolicitudes {
         Sesion sesion = getSesion();
         if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
         Cliente solicitante = sesion.getUsuarioActual();
-        
+
         if (solicitante.getId() == objetivo.getId()) return "[ERROR] No puedes seguirte a ti mismo";
-        
-        for(int id : solicitante.getSiguiendo()) {
-            if(id == objetivo.getId()) return "[AVISO] Ya sigues a este usuario";
-        }
+        if (solicitante.sigueA(objetivo.getId())) return "[AVISO] Ya sigues a este usuario";
+        if (solicitante.getCantidadSiguiendo() >= Cliente.MAX_SEGUIDOS)
+            return "[ERROR] Alcanzaste el limite de " + Cliente.MAX_SEGUIDOS + " seguidos";
 
         boolean resultado = gestor.enviarSolicitud(solicitante.getId(), objetivo.getId());
-        
+
         if (!resultado) return "[ERROR] No se pudo enviar solicitud";
-        
+
         return "[OK] Solicitud enviada a @" + objetivo.getNombre();
     }
 
@@ -561,7 +560,7 @@ public class MenuSolicitudes {
     */
     private void mostrarCuartoNivelABB() {
         limpiarPantalla();
-        utils.mostrarCabecera("Inicio", "Amigos", "Explorar", "ABB - Cuarto Nivel");
+        utils.mostrarCabecera("Inicio", "Red Social", "Explorar", "ABB - Cuarto Nivel");
 
         Sesion sesion = getSesion();
         if (!sesion.estaAutenticado()) {
@@ -650,7 +649,7 @@ public class MenuSolicitudes {
         String msg = "";
         do {
             limpiarPantalla();
-            utils.mostrarCabecera("Inicio", "Amigos", "Amistades");
+            utils.mostrarCabecera("Inicio", "Red Social", "Amistades");
 
             Sesion sesion = getSesion();
             if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
@@ -779,7 +778,7 @@ public class MenuSolicitudes {
     */
     private String calcularDistancia() {
         limpiarPantalla();
-        utils.mostrarCabecera("Inicio", "Amigos", "Distancia BFS");
+        utils.mostrarCabecera("Inicio", "Red Social", "Distancia BFS");
 
         Sesion sesion = getSesion();
         if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
@@ -804,10 +803,12 @@ public class MenuSolicitudes {
             return "[ERROR] ID destino " + idDestino + " no existe";
         }
 
-        // Calcular distancia
+        // Calcular distancia y camino
         long inicio = System.nanoTime();
-        int distancia = gestor.calcularDistancia(idOrigen, idDestino);
+        int[] camino = gestor.obtenerCamino(idOrigen, idDestino);
         long tiempoNs = System.nanoTime() - inicio;
+
+        int distancia = camino.length > 0 ? camino.length - 1 : -1;
 
         // Mostrar resultado
         System.out.println();
@@ -822,6 +823,19 @@ public class MenuSolicitudes {
             System.out.println("           (no hay cadena de seguimientos que los conecte)");
         } else {
             System.out.println("Resultado: " + distancia + " salto(s)");
+
+            // Mostrar el camino recorrido
+            StringBuilder sb = new StringBuilder("Camino:  ");
+            for (int i = 0; i < camino.length; i++) {
+                Cliente nodo = gestor.buscarPorId(camino[i]);
+                if (nodo != null) {
+                    sb.append("@").append(nodo.getNombre()).append("(").append(nodo.getId()).append(")");
+                }
+                if (i < camino.length - 1) {
+                    sb.append(" -> ");
+                }
+            }
+            System.out.println(sb.toString());
         }
 
         System.out.println("Tiempo BFS: " + String.format("%.3f ms", tiempoNs / 1_000_000.0));
@@ -856,7 +870,7 @@ public class MenuSolicitudes {
         int opcion;
         do {
             limpiarPantalla();
-            utils.mostrarCabecera("Inicio", "Amigos", "Matriz de Adyacencia");
+            utils.mostrarCabecera("Inicio", "Red Social", "Matriz de Adyacencia");
 
             System.out.println("Base actual: " + totalActual + " clientes (muy grande para visualizar completa)\n");
             System.out.println(" 1. Demo Iteracion 3 (10 clientes con relaciones de ejemplo)");
@@ -893,7 +907,7 @@ public class MenuSolicitudes {
     */
     private void visualizarSubgrafo() {
         limpiarPantalla();
-        utils.mostrarCabecera("Inicio", "Amigos", "Matriz", "Subgrafo");
+        utils.mostrarCabecera("Inicio", "Red Social", "Matriz", "Subgrafo");
 
         Sesion sesion = getSesion();
         int idDefault = sesion.estaAutenticado() ? sesion.getUsuarioActual().getId() : 0;
@@ -1021,20 +1035,43 @@ public class MenuSolicitudes {
     }
 
     /*
-    Renderiza las 4 pantallas de visualización:
+    Renderiza las 4 pantallas de visualización con navegación:
     1. Tabla de clientes
     2. Listas de adyacencia (seguimientos + amistades)
     3. Matriz de seguimientos (dirigida)
     4. Matriz de amistades (no dirigida)
+
+    Controles: 1 = siguiente, 2 = anterior, 0 = salir
     */
     private void renderizarPantallas(Cliente[] todos, servicio.GestorClientes gestorViz, String etiqueta) {
-        int n = todos.length;
+        int totalPantallas = 4;
+        int pantalla = 0;
 
-        // ═══ 1. TABLA DE CLIENTES ═══
-        limpiarPantalla();
-        utils.mostrarCabecera("Inicio", "Amigos", "Matriz de Adyacencia");
+        while (true) {
+            limpiarPantalla();
+
+            switch (pantalla) {
+                case 0: renderPantallaTabla(todos, etiqueta); break;
+                case 1: renderPantallaListas(todos, gestorViz); break;
+                case 2: renderPantallaMatrizSeguimientos(todos, gestorViz); break;
+                case 3: renderPantallaMatrizAmistades(todos, gestorViz); break;
+            }
+
+            imprimirSeparador(MenuUtils.ANCHO);
+            System.out.println("[Pantalla " + (pantalla + 1) + "/" + totalPantallas + "]  1. Siguiente  |  2. Anterior  |  0. Salir");
+            System.out.print("Opcion: ");
+            int opcion = utils.leerEntero();
+
+            if (opcion == 0) break;
+            if (opcion == 1) pantalla = (pantalla + 1) % totalPantallas;
+            if (opcion == 2) pantalla = (pantalla - 1 + totalPantallas) % totalPantallas;
+        }
+    }
+
+    private void renderPantallaTabla(Cliente[] todos, String etiqueta) {
+        utils.mostrarCabecera("Inicio", "Red Social", "Matriz de Adyacencia");
         System.out.println("Fuente: " + etiqueta + "\n");
-        System.out.println(n + " clientes cargados:\n");
+        System.out.println(todos.length + " clientes cargados:\n");
         System.out.println("+------+----------+---------+------------+------------+");
         System.out.println("| ID   | Nombre   | Scoring | Siguiendo  | Amigos     |");
         System.out.println("+------+----------+---------+------------+------------+");
@@ -1048,11 +1085,10 @@ public class MenuSolicitudes {
         }
         System.out.println("+------+----------+---------+------------+------------+");
         System.out.println();
-        pausar(scanner);
+    }
 
-        // ═══ 2. LISTAS DE ADYACENCIA ═══
-        limpiarPantalla();
-        utils.mostrarCabecera("Inicio", "Amigos", "Matriz de Adyacencia", "Listas");
+    private void renderPantallaListas(Cliente[] todos, servicio.GestorClientes gestorViz) {
+        utils.mostrarCabecera("Inicio", "Red Social", "Matriz de Adyacencia", "Listas");
 
         System.out.println("LISTAS DE ADYACENCIA — SEGUIMIENTOS (grafo dirigido)\n");
         for (Cliente c : todos) {
@@ -1092,29 +1128,26 @@ public class MenuSolicitudes {
             System.out.println(sb);
         }
         System.out.println();
-        pausar(scanner);
+    }
 
-        // ═══ 3. MATRIZ DE SEGUIMIENTOS (dirigida) ═══
-        limpiarPantalla();
-        utils.mostrarCabecera("Inicio", "Amigos", "Matriz de Adyacencia", "Seguimientos");
+    private void renderPantallaMatrizSeguimientos(Cliente[] todos, servicio.GestorClientes gestorViz) {
+        utils.mostrarCabecera("Inicio", "Red Social", "Matriz de Adyacencia", "Seguimientos");
         System.out.println("MATRIZ DE ADYACENCIA — SEGUIMIENTOS (grafo dirigido)");
         System.out.println("Lectura: fila i SIGUE A columna j\n");
         imprimirMatriz(todos, gestorViz, false);
         System.out.println();
         System.out.println("Asimetrica: X = fila sigue a columna");
         System.out.println();
-        pausar(scanner);
+    }
 
-        // ═══ 4. MATRIZ DE AMISTADES (no dirigida) ═══
-        limpiarPantalla();
-        utils.mostrarCabecera("Inicio", "Amigos", "Matriz de Adyacencia", "Amistades");
+    private void renderPantallaMatrizAmistades(Cliente[] todos, servicio.GestorClientes gestorViz) {
+        utils.mostrarCabecera("Inicio", "Red Social", "Matriz de Adyacencia", "Amistades");
         System.out.println("MATRIZ DE ADYACENCIA — AMISTADES (grafo no dirigido)");
         System.out.println("Lectura: fila i ES AMIGO DE columna j\n");
         imprimirMatriz(todos, gestorViz, true);
         System.out.println();
         System.out.println("Simetrica: A[i][j] = A[j][i] (bidireccional)");
         System.out.println();
-        pausar(scanner);
     }
 
     /*
