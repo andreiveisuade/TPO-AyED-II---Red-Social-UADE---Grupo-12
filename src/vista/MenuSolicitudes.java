@@ -43,7 +43,8 @@ public class MenuSolicitudes {
             System.out.println(" 3. Explorar / Buscar usuarios");
             System.out.println(" 4. Amistades (bidireccionales)");
             System.out.println(" 5. Calcular Distancia (BFS)");
-            System.out.println(" 0. <- Volver");
+            System.out.println(" 6. Visualizar Grafo (Matriz de Adyacencia)");
+            System.out.println(" 0. Volver");
             imprimirSeparador(MenuUtils.ANCHO);
             
             if (!mensaje.isEmpty()) {
@@ -51,7 +52,7 @@ public class MenuSolicitudes {
                 mensaje = "";
             }
             
-            System.out.print("Opción: ");
+            System.out.print("Opcion: ");
             opcion = utils.leerEntero();
 
             switch (opcion) {
@@ -70,6 +71,9 @@ public class MenuSolicitudes {
                 case 5:
                     mensaje = calcularDistancia();
                     break;
+                case 6:
+                    visualizarMatrizAdyacencia();
+                    break;
             }
         } while (opcion != 0);
     }
@@ -86,14 +90,14 @@ public class MenuSolicitudes {
             utils.mostrarCabecera("Inicio", "Amigos", "Mis Amigos");
 
             Sesion sesion = getSesion();
-            if (!sesion.estaAutenticado()) return "[ERROR] Error: no autenticado";
+            if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
 
             Cliente usuario = sesion.getUsuarioActual();
             int[] siguiendo = usuario.getSiguiendo();
             int cantidad = usuario.getCantidadSiguiendo();
 
             if (cantidad == 0) {
-                System.out.println("[AVISO] No sigues a nadie aún.\n");
+                System.out.println("[AVISO] No sigues a nadie\n");
                 System.out.println(" 0. Volver");
                 imprimirSeparador(MenuUtils.ANCHO);
             } else {
@@ -123,7 +127,7 @@ public class MenuSolicitudes {
                 msg = "";
             }
 
-            System.out.print("Opción: ");
+            System.out.print("Opcion: ");
             opcionAmigos = utils.leerEntero();
 
             if (opcionAmigos == 1 && cantidad > 0) {
@@ -142,7 +146,7 @@ public class MenuSolicitudes {
         int idAmigo = utils.leerEntero();
 
         Sesion sesion = getSesion();
-        if (!sesion.estaAutenticado()) return "[ERROR] Error: no autenticado";
+        if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
         Cliente usuario = sesion.getUsuarioActual();
 
         // Validar que el ID esté en la lista de seguidos
@@ -189,7 +193,7 @@ public class MenuSolicitudes {
                 msg = "";
             }
 
-            System.out.print("Opción: ");
+            System.out.print("Opcion: ");
             opcionSolo = utils.leerEntero();
 
             if (opcionSolo == 1) {
@@ -224,7 +228,7 @@ public class MenuSolicitudes {
                 msg = "";
             }
             
-            System.out.print("Opción: ");
+            System.out.print("Opcion: ");
             opcionEx = utils.leerEntero();
             
             switch (opcionEx) {
@@ -326,7 +330,7 @@ public class MenuSolicitudes {
             System.out.println(" 3. Agregar por ID");
             System.out.println(" 0. Volver");
             imprimirSeparador(MenuUtils.ANCHO);
-            System.out.print("Opción: ");
+            System.out.print("Opcion: ");
             opcion = utils.leerEntero();
 
             switch (opcion) {
@@ -397,7 +401,7 @@ public class MenuSolicitudes {
             System.out.println(" 3. Agregar por ID");
             System.out.println(" 0. Volver");
             imprimirSeparador(MenuUtils.ANCHO);
-            System.out.print("Opción: ");
+            System.out.print("Opcion: ");
             opcion = utils.leerEntero();
 
             switch (opcion) {
@@ -452,7 +456,7 @@ public class MenuSolicitudes {
     */
     private String enviarSolicitud(Cliente objetivo) {
         Sesion sesion = getSesion();
-        if (!sesion.estaAutenticado()) return "[ERROR] Error: no autenticado";
+        if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
         Cliente solicitante = sesion.getUsuarioActual();
         
         if (solicitante.getId() == objetivo.getId()) return "[ERROR] No puedes seguirte a ti mismo";
@@ -473,7 +477,7 @@ public class MenuSolicitudes {
     */
     private String verSolicitudesPendientes() {
         Sesion sesion = getSesion();
-        if (!sesion.estaAutenticado()) return "[ERROR] Error: no autenticado";
+        if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
         Cliente usuarioActual = sesion.getUsuarioActual();
         
         if (!usuarioActual.tieneSolicitudesPendientes()) {
@@ -485,7 +489,7 @@ public class MenuSolicitudes {
                 Cliente sol = gestor.buscarPorId(idSol);
                 String nombreSol = (sol != null) ? sol.getNombre() : "ID:" + idSol;
                 
-                return "Siguiente: " + nombreSol + " quiere seguirte | Total: " + usuarioActual.getCantidadSolicitudesPendientes() + " pendientes";
+                return "Siguiente: @" + nombreSol + " quiere seguirte (" + usuarioActual.getCantidadSolicitudesPendientes() + " pendientes)";
             } catch (Exception e) {
                 return "Error leyendo solicitud";
             }
@@ -497,7 +501,7 @@ public class MenuSolicitudes {
     */
     private String aceptarSolicitud() {
         Sesion sesion = getSesion();
-        if (!sesion.estaAutenticado()) return "[ERROR] Error: no autenticado";
+        if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
         Cliente usuarioActual = sesion.getUsuarioActual();
 
         SolicitudSeguimiento solicitud = usuarioActual.procesarSiguienteSolicitud();
@@ -513,11 +517,9 @@ public class MenuSolicitudes {
             boolean resultado = solicitante != null && gestor.aceptarSolicitud(solicitante, usuarioActual, solicitud);
 
             if (resultado) {
-                System.out.println("✅ ¡Solicitud aceptada!");
-                System.out.println("Ahora sigues a " + solicitante.getNombre());
-                return "[OK] Solicitud procesada.";
+                return "[OK] Aceptada: ahora sigues a @" + solicitante.getNombre();
             } else {
-                return "[ERROR] No se pudo procesar (limite o error)";
+                return "[ERROR] No se pudo procesar";
             }
         } catch (Exception e) {
             return "[ERROR] Error procesando solicitud";
@@ -529,7 +531,7 @@ public class MenuSolicitudes {
     */
     private String rechazarSolicitud() {
         Sesion sesion = getSesion();
-        if (!sesion.estaAutenticado()) return "[ERROR] Error: no autenticado";
+        if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
         Cliente usuarioActual = sesion.getUsuarioActual();
 
         SolicitudSeguimiento solicitud = usuarioActual.procesarSiguienteSolicitud();
@@ -563,7 +565,7 @@ public class MenuSolicitudes {
 
         Sesion sesion = getSesion();
         if (!sesion.estaAutenticado()) {
-            imprimirAviso("Debes iniciar sesión para ver el análisis ABB.");
+            imprimirAviso("No autenticado");
             return;
         }
 
@@ -573,7 +575,7 @@ public class MenuSolicitudes {
         tda.ArbolBinarioBusqueda<Integer, Cliente> arbol = gestor.construirArbolRelaciones(idUsuario);
 
         if (arbol.estaVacio()) {
-            imprimirAviso("@" + sesion.getUsuarioActual().getNombre() + " no tiene seguidores.");
+            imprimirAviso("Sin seguidores");
             return;
         }
 
@@ -588,7 +590,7 @@ public class MenuSolicitudes {
         Object[] resultadosNivel = arbol.obtenerEnNivel(3);
 
         if (resultadosNivel.length == 0) {
-            imprimirAviso("No hay seguidores en el cuarto nivel (Nivel 3).");
+            imprimirAviso("Sin seguidores en nivel 4");
             return;
         }
 
@@ -659,7 +661,7 @@ public class MenuSolicitudes {
             int cantAmigos = gestor.obtenerCantidadAmigos(usuario.getId());
 
             if (cantAmigos == 0) {
-                System.out.println("[AVISO] No tienes amistades aun.\n");
+                System.out.println("[AVISO] Sin amistades\n");
             } else {
                 System.out.println("+------+--------------------+---------+");
                 System.out.println("| ID   | Amigo              | Scoring |");
@@ -724,7 +726,15 @@ public class MenuSolicitudes {
             return "[AVISO] Ya son amigos";
         }
 
-        boolean resultado = gestor.agregarAmistad(sesion.getUsuarioActual().getId(), idAmigo);
+        Cliente usuario = sesion.getUsuarioActual();
+        if (usuario.getCantidadAmigos() >= Cliente.MAX_AMIGOS) {
+            return "[ERROR] Alcanzaste el limite de " + Cliente.MAX_AMIGOS + " amigos";
+        }
+        if (amigo.getCantidadAmigos() >= Cliente.MAX_AMIGOS) {
+            return "[ERROR] @" + amigo.getNombre() + " ya tiene " + Cliente.MAX_AMIGOS + " amigos";
+        }
+
+        boolean resultado = gestor.agregarAmistad(usuario.getId(), idAmigo);
         if (resultado) {
             return "[OK] Ahora eres amigo de @" + amigo.getNombre() + " (bidireccional)";
         }
@@ -774,8 +784,7 @@ public class MenuSolicitudes {
         Sesion sesion = getSesion();
         if (!sesion.estaAutenticado()) return "[ERROR] No autenticado";
 
-        System.out.println("Calcula el numero de saltos entre dos clientes");
-        System.out.println("en el grafo dirigido de seguimientos.\n");
+        System.out.println("Saltos entre clientes en el grafo dirigido de seguimientos\n");
 
         System.out.print("ID origen (0 = tu ID " + sesion.getUsuarioActual().getId() + "): ");
         int idOrigen = utils.leerEntero();
@@ -789,14 +798,10 @@ public class MenuSolicitudes {
         Cliente destino = gestor.buscarPorId(idDestino);
 
         if (origen == null) {
-            System.out.println("\n[ERROR] ID origen " + idOrigen + " no existe.");
-            pausar(scanner);
-            return "";
+            return "[ERROR] ID origen " + idOrigen + " no existe";
         }
         if (destino == null) {
-            System.out.println("\n[ERROR] ID destino " + idDestino + " no existe.");
-            pausar(scanner);
-            return "";
+            return "[ERROR] ID destino " + idDestino + " no existe";
         }
 
         // Calcular distancia
@@ -806,28 +811,377 @@ public class MenuSolicitudes {
 
         // Mostrar resultado
         System.out.println();
-        System.out.println("+-------------------------------------------+");
-        System.out.println("|         RESULTADO BFS - DISTANCIA          |");
-        System.out.println("+-------------------------------------------+");
-        System.out.println("| Origen:  " + String.format("%-33s", "@" + origen.getNombre() + " (ID:" + idOrigen + ")") + "|");
-        System.out.println("| Destino: " + String.format("%-33s", "@" + destino.getNombre() + " (ID:" + idDestino + ")") + "|");
-        System.out.println("+-------------------------------------------+");
+        System.out.println("Origen:  @" + origen.getNombre() + " (ID:" + idOrigen + ")");
+        System.out.println("Destino: @" + destino.getNombre() + " (ID:" + idDestino + ")");
+        imprimirSeparador(MenuUtils.ANCHO);
 
         if (distancia == 0) {
-            System.out.println("| Distancia: 0 (mismo cliente)               |");
+            System.out.println("Resultado: 0 saltos (mismo cliente)");
         } else if (distancia == -1) {
-            System.out.println("| Distancia: SIN CAMINO                      |");
-            System.out.println("| No existe ruta dirigida entre ellos.        |");
+            System.out.println("Resultado: No existe camino entre estos clientes");
+            System.out.println("           (no hay cadena de seguimientos que los conecte)");
         } else {
-            System.out.println("| Distancia: " + String.format("%-31s", distancia + " salto(s)") + "|");
+            System.out.println("Resultado: " + distancia + " salto(s)");
         }
 
-        System.out.println("| Tiempo BFS: " + String.format("%-30s", String.format("%.3f ms", tiempoNs / 1_000_000.0)) + "|");
-        System.out.println("+-------------------------------------------+");
+        System.out.println("Tiempo BFS: " + String.format("%.3f ms", tiempoNs / 1_000_000.0));
 
         System.out.println();
         pausar(scanner);
         return "";
+    }
+
+    /*
+    ══════════════════════════════════════════════════════════
+    ITERACIÓN 3: VISUALIZACIÓN DE MATRIZ DE ADYACENCIA
+    ══════════════════════════════════════════════════════════
+    */
+
+    private static final String DEMO_DB = "data/clientes_iteracion_3.json";
+
+    /*
+    Submenú para elegir el modo de visualización de la matriz de adyacencia.
+    Opción 1: Demo Iteración 3 (10 clientes con relaciones ricas)
+    Opción 2: Subgrafo del vecindario de un cliente de la base actual
+    */
+    private void visualizarMatrizAdyacencia() {
+        int totalActual = gestor.getCantidadClientes();
+
+        // Si la base ya es chica (≤ 20), mostrar directo sin submenú
+        if (totalActual > 0 && totalActual <= 20) {
+            renderizarMatriz(gestor, "base actual (" + totalActual + " clientes)");
+            return;
+        }
+
+        int opcion;
+        do {
+            limpiarPantalla();
+            utils.mostrarCabecera("Inicio", "Amigos", "Matriz de Adyacencia");
+
+            System.out.println("Base actual: " + totalActual + " clientes (muy grande para visualizar completa)\n");
+            System.out.println(" 1. Demo Iteracion 3 (10 clientes con relaciones de ejemplo)");
+            System.out.println(" 2. Subgrafo de un cliente (vecindario desde la base actual)");
+            System.out.println(" 0. Volver");
+            imprimirSeparador(MenuUtils.ANCHO);
+
+            System.out.print("Opcion: ");
+            opcion = utils.leerEntero();
+
+            switch (opcion) {
+                case 1:
+                    visualizarDemo();
+                    break;
+                case 2:
+                    visualizarSubgrafo();
+                    break;
+            }
+        } while (opcion != 0);
+    }
+
+    /*
+    Carga la base de datos demo (10 clientes) y renderiza las matrices.
+    */
+    private void visualizarDemo() {
+        servicio.GestorClientes gestorDemo = new servicio.GestorClientes(DEMO_DB);
+        renderizarMatriz(gestorDemo, "demo Iteracion 3");
+    }
+
+    /*
+    Permite al usuario elegir un cliente de la base actual y visualiza
+    su subgrafo: el cliente + todos sus vecinos directos (siguiendo,
+    seguidores y amigos). Máximo ~20 nodos para que la matriz sea legible.
+    */
+    private void visualizarSubgrafo() {
+        limpiarPantalla();
+        utils.mostrarCabecera("Inicio", "Amigos", "Matriz", "Subgrafo");
+
+        Sesion sesion = getSesion();
+        int idDefault = sesion.estaAutenticado() ? sesion.getUsuarioActual().getId() : 0;
+
+        System.out.println("Se mostrara: el cliente + sus seguidos + seguidores + amigos.\n");
+
+        System.out.print("ID del cliente central (0 = tu ID " + idDefault + "): ");
+        int idCentral = utils.leerEntero();
+        if (idCentral == 0) idCentral = idDefault;
+
+        Cliente central = gestor.buscarPorId(idCentral);
+        if (central == null) {
+            imprimirError("ID " + idCentral + " no encontrado.");
+            pausar(scanner);
+            return;
+        }
+
+        // Recolectar IDs únicos del vecindario
+        // Usamos un array temporal grande y luego recortamos
+        int[] siguiendo = central.getSiguiendo();
+        int[] seguidores = central.getSeguidores();
+        int[] amigos = central.obtenerAmigos();
+        int maxNodos = 1 + siguiendo.length + seguidores.length + amigos.length;
+        int[] idsTemp = new int[maxNodos];
+        int count = 0;
+
+        // Agregar el cliente central
+        idsTemp[count++] = idCentral;
+
+        // Agregar siguiendo
+        for (int id : siguiendo) {
+            if (!contieneId(idsTemp, count, id)) idsTemp[count++] = id;
+        }
+        // Agregar seguidores
+        for (int id : seguidores) {
+            if (!contieneId(idsTemp, count, id)) idsTemp[count++] = id;
+        }
+        // Agregar amigos
+        for (int id : amigos) {
+            if (!contieneId(idsTemp, count, id)) idsTemp[count++] = id;
+        }
+
+        // Limitar a 20 nodos para que la matriz sea legible
+        int MAX_NODOS = 20;
+        if (count > MAX_NODOS) {
+            System.out.println("\n[AVISO] Vecindario tiene " + count + " nodos, mostrando los primeros " + MAX_NODOS);
+            count = MAX_NODOS;
+        }
+
+        // Construir array de clientes
+        Cliente[] subgrafo = new Cliente[count];
+        int validCount = 0;
+        for (int i = 0; i < count; i++) {
+            Cliente c = gestor.buscarPorId(idsTemp[i]);
+            if (c != null) subgrafo[validCount++] = c;
+        }
+
+        // Recortar si hubo IDs inválidos
+        if (validCount < count) {
+            Cliente[] recortado = new Cliente[validCount];
+            for (int i = 0; i < validCount; i++) recortado[i] = subgrafo[i];
+            subgrafo = recortado;
+        }
+
+        if (subgrafo.length == 0) {
+            imprimirError("No se encontraron clientes validos en el vecindario.");
+            pausar(scanner);
+            return;
+        }
+
+        // Ordenar por ID
+        ordenarPorId(subgrafo);
+
+        System.out.println("\nSubgrafo de @" + central.getNombre() + " (ID:" + idCentral + "): "
+            + subgrafo.length + " nodos\n");
+
+        renderizarPantallas(subgrafo, gestor, "subgrafo de @" + central.getNombre());
+    }
+
+    /*
+    Verifica si un ID ya existe en el array hasta la posición count.
+    */
+    private boolean contieneId(int[] ids, int count, int id) {
+        for (int i = 0; i < count; i++) {
+            if (ids[i] == id) return true;
+        }
+        return false;
+    }
+
+    /*
+    Ordena un array de clientes por ID usando selection sort.
+    */
+    private void ordenarPorId(Cliente[] clientes) {
+        for (int i = 0; i < clientes.length - 1; i++) {
+            int minIdx = i;
+            for (int j = i + 1; j < clientes.length; j++) {
+                if (clientes[j].getId() < clientes[minIdx].getId()) {
+                    minIdx = j;
+                }
+            }
+            if (minIdx != i) {
+                Cliente tmp = clientes[i];
+                clientes[i] = clientes[minIdx];
+                clientes[minIdx] = tmp;
+            }
+        }
+    }
+
+    /*
+    Punto de entrada para renderizar la matriz completa de un gestor.
+    Obtiene todos los clientes, los ordena y delega a renderizarPantallas.
+    */
+    private void renderizarMatriz(servicio.GestorClientes gestorViz, String etiqueta) {
+        Cliente[] todos = gestorViz.obtenerTodosLosClientes();
+
+        if (todos.length == 0) {
+            limpiarPantalla();
+            imprimirError("No se pudo cargar datos para la visualizacion.");
+            pausar(scanner);
+            return;
+        }
+
+        ordenarPorId(todos);
+        renderizarPantallas(todos, gestorViz, etiqueta);
+    }
+
+    /*
+    Renderiza las 4 pantallas de visualización:
+    1. Tabla de clientes
+    2. Listas de adyacencia (seguimientos + amistades)
+    3. Matriz de seguimientos (dirigida)
+    4. Matriz de amistades (no dirigida)
+    */
+    private void renderizarPantallas(Cliente[] todos, servicio.GestorClientes gestorViz, String etiqueta) {
+        int n = todos.length;
+
+        // ═══ 1. TABLA DE CLIENTES ═══
+        limpiarPantalla();
+        utils.mostrarCabecera("Inicio", "Amigos", "Matriz de Adyacencia");
+        System.out.println("Fuente: " + etiqueta + "\n");
+        System.out.println(n + " clientes cargados:\n");
+        System.out.println("+------+----------+---------+------------+------------+");
+        System.out.println("| ID   | Nombre   | Scoring | Siguiendo  | Amigos     |");
+        System.out.println("+------+----------+---------+------------+------------+");
+        for (Cliente c : todos) {
+            System.out.printf("| %-4d | %-8s | %-7d | %-10s | %-10s |%n",
+                c.getId(),
+                c.getNombre(),
+                c.getScoring(),
+                formatIds(c.getSiguiendo()),
+                formatIds(c.obtenerAmigos()));
+        }
+        System.out.println("+------+----------+---------+------------+------------+");
+        System.out.println();
+        pausar(scanner);
+
+        // ═══ 2. LISTAS DE ADYACENCIA ═══
+        limpiarPantalla();
+        utils.mostrarCabecera("Inicio", "Amigos", "Matriz de Adyacencia", "Listas");
+
+        System.out.println("LISTAS DE ADYACENCIA — SEGUIMIENTOS (grafo dirigido)\n");
+        for (Cliente c : todos) {
+            int[] sig = c.getSiguiendo();
+            StringBuilder sb = new StringBuilder();
+            sb.append(String.format("  %-8s (ID %2d): ", c.getNombre(), c.getId()));
+            if (sig.length == 0) {
+                sb.append("[ ]");
+            } else {
+                sb.append("[ ");
+                for (int i = 0; i < sig.length; i++) {
+                    Cliente dest = gestorViz.buscarPorId(sig[i]);
+                    sb.append(dest != null ? dest.getNombre() : "?");
+                    if (i < sig.length - 1) sb.append(", ");
+                }
+                sb.append(" ]");
+            }
+            System.out.println(sb);
+        }
+
+        System.out.println("\nLISTAS DE ADYACENCIA — AMISTADES (grafo no dirigido)\n");
+        for (Cliente c : todos) {
+            int[] amigos = c.obtenerAmigos();
+            StringBuilder sb = new StringBuilder();
+            sb.append(String.format("  %-8s (ID %2d): ", c.getNombre(), c.getId()));
+            if (amigos.length == 0) {
+                sb.append("[ ]");
+            } else {
+                sb.append("[ ");
+                for (int i = 0; i < amigos.length; i++) {
+                    Cliente a = gestorViz.buscarPorId(amigos[i]);
+                    sb.append(a != null ? a.getNombre() : "?");
+                    if (i < amigos.length - 1) sb.append(", ");
+                }
+                sb.append(" ]");
+            }
+            System.out.println(sb);
+        }
+        System.out.println();
+        pausar(scanner);
+
+        // ═══ 3. MATRIZ DE SEGUIMIENTOS (dirigida) ═══
+        limpiarPantalla();
+        utils.mostrarCabecera("Inicio", "Amigos", "Matriz de Adyacencia", "Seguimientos");
+        System.out.println("MATRIZ DE ADYACENCIA — SEGUIMIENTOS (grafo dirigido)");
+        System.out.println("Lectura: fila i SIGUE A columna j\n");
+        imprimirMatriz(todos, gestorViz, false);
+        System.out.println();
+        System.out.println("Asimetrica: X = fila sigue a columna");
+        System.out.println();
+        pausar(scanner);
+
+        // ═══ 4. MATRIZ DE AMISTADES (no dirigida) ═══
+        limpiarPantalla();
+        utils.mostrarCabecera("Inicio", "Amigos", "Matriz de Adyacencia", "Amistades");
+        System.out.println("MATRIZ DE ADYACENCIA — AMISTADES (grafo no dirigido)");
+        System.out.println("Lectura: fila i ES AMIGO DE columna j\n");
+        imprimirMatriz(todos, gestorViz, true);
+        System.out.println();
+        System.out.println("Simetrica: A[i][j] = A[j][i] (bidireccional)");
+        System.out.println();
+        pausar(scanner);
+    }
+
+    /*
+    Imprime una matriz de adyacencia NxN en la consola.
+    Si esAmistad=true, usa el campo amistades. Si no, usa siguiendo.
+    */
+    private void imprimirMatriz(Cliente[] clientes, servicio.GestorClientes g, boolean esAmistad) {
+        int n = clientes.length;
+        int anchoId = 3;
+        int anchoNombre = 8;
+
+        // Encabezado: IDs de columna
+        System.out.printf("%" + (anchoNombre + anchoId + 4) + "s", "");
+        for (Cliente c : clientes) {
+            System.out.printf(" %2d ", c.getId());
+        }
+        System.out.println();
+
+        // Separador superior
+        System.out.printf("%" + (anchoNombre + anchoId + 3) + "s+", "");
+        for (int i = 0; i < n; i++) System.out.print("----");
+        System.out.println("-+");
+
+        // Filas
+        for (int i = 0; i < n; i++) {
+            Cliente fila = clientes[i];
+            System.out.printf("  %-" + anchoNombre + "s %2d |", fila.getNombre(), fila.getId());
+
+            for (int j = 0; j < n; j++) {
+                Cliente col = clientes[j];
+                boolean hayConexion;
+
+                if (esAmistad) {
+                    hayConexion = fila.esAmigoDE(col.getId());
+                } else {
+                    hayConexion = fila.sigueA(col.getId());
+                }
+
+                if (i == j) {
+                    System.out.print("  . ");  // diagonal
+                } else if (hayConexion) {
+                    System.out.print("  X ");
+                } else {
+                    System.out.print("  . ");
+                }
+            }
+            System.out.println("|");
+        }
+
+        // Separador inferior
+        System.out.printf("%" + (anchoNombre + anchoId + 3) + "s+", "");
+        for (int i = 0; i < n; i++) System.out.print("----");
+        System.out.println("-+");
+    }
+
+    /*
+    Formatea un array de IDs como string compacto: "2, 3" o "-"
+    */
+    private String formatIds(int[] ids) {
+        if (ids.length == 0) return "-";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < ids.length; i++) {
+            if (ids[i] == 0) continue;
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(ids[i]);
+        }
+        return sb.length() == 0 ? "-" : sb.toString();
     }
 
     /*

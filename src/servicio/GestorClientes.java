@@ -293,7 +293,7 @@ public class GestorClientes {
      * Elimina un cliente del sistema.
      * Limpia índices y referencias en cascada usando índices bidireccionales.
      *
-     * Complejidad: O(seguidores + siguiendo) gracias a índices bidireccionales
+     * Complejidad: O(seguidores + siguiendo + amigos) gracias a índices bidireccionales
      */
     public boolean eliminarCliente(int id) {
         Cliente cliente = clientes.obtener(id);
@@ -318,6 +318,15 @@ public class GestorClientes {
             Cliente seguido = clientes.obtener(idSeguido);
             if (seguido != null) {
                 seguido.eliminarSeguidor(id);
+            }
+        }
+
+        // Limpiar amistades bidireccionales (Iteración 3)
+        int[] idsAmigos = cliente.obtenerAmigos();
+        for (int idAmigo : idsAmigos) {
+            Cliente amigo = clientes.obtener(idAmigo);
+            if (amigo != null) {
+                amigo.eliminarAmistad(id);
             }
         }
 

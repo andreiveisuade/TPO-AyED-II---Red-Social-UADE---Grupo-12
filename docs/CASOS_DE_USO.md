@@ -3,7 +3,7 @@
 ## Vision General
 
 Este documento especifica todos los **casos de uso** del sistema de Red Social, organizados por:
-- **Iteracion** (Iter 1, 2)
+- **Iteracion** (Iter 1, 2, 3)
 - **Actor** (Usuario Autenticado, Sistema)
 - **Flujo** (Normal, Alternativo, Excepcional)
 
@@ -61,6 +61,18 @@ Este documento especifica todos los **casos de uso** del sistema de Red Social, 
 |  +-- CU-025: Obtener Seguidores Ordenados por Scoring     |
 |  +-- CU-026: Obtener Clientes en Cuarto Nivel (ABB)       |
 |  +-- CU-027: Consultar Influencia por Scoring             |
++----------------------------------------------------------+
+|     ITERACION 3: RELACIONES BIDIRECCIONALES (AMISTADES)  |
+|  +-- CU-028: Agregar Amistad Bidireccional               |
+|  +-- CU-029: Eliminar Amistad Bidireccional              |
+|  +-- CU-030: Ver Lista de Amigos                         |
+|  +-- CU-031: Verificar si Son Amigos                     |
+|  +-- CU-032: Obtener Cantidad de Amigos                  |
++----------------------------------------------------------+
+|         ITERACION 3: ANALISIS DE DISTANCIA               |
+|  +-- CU-033: Calcular Distancia (BFS)                    |
+|  +-- CU-034: Encontrar Camino Mas Corto                  |
+|  +-- CU-035: Verificar Conectividad                      |
 +----------------------------------------------------------+
 |           SISTEMA: PERSISTENCIA Y DATOS                   |
 |  +-- CU-036: Cargar Clientes desde JSON                   |
@@ -757,6 +769,195 @@ Nota: Sistema ABB es global y construido bajo demanda (lazy loading)
 
 ---
 
+# ITERACION 3: RELACIONES BIDIRECCIONALES (AMISTADES)
+
+## **CU-028: Agregar Amistad Bidireccional**
+
+**Iteracion:** 3
+**Actor:** Usuario Autenticado
+**Precondiciones:** Ambos clientes existen, no son amigos, ninguno alcanzo MAX_AMIGOS
+
+**Flujo Normal:**
+```
+1. Usuario selecciona "Agregar amistad"
+2. Usuario ingresa ID del otro cliente
+3. Sistema valida:
+   - Origen != Destino (no amistad consigo mismo)
+   - No ya son amigos (no duplicado)
+   - Origen no alcanzo MAX_AMIGOS=2
+   - Destino no alcanzo MAX_AMIGOS=2
+4. Si valido:
+   - Sistema agrega B en amistades de A (O(1))
+   - Sistema agrega A en amistades de B (O(1))
+   - Sistema muestra: "[OK] Ahora eres amigo de @{nombre} (bidireccional)"
+5. Si invalido:
+   - Si limite propio: "[ERROR] Alcanzaste el limite de 2 amigos"
+   - Si limite del otro: "[ERROR] @{nombre} ya tiene 2 amigos"
+```
+
+**Regla de negocio:** MAX_AMIGOS=2. Ambos lados deben tener espacio. Si falla, ninguno se modifica.
+
+**Complejidad:** O(1)
+**Clases Involucradas:** `GestorRelaciones.java`, `Cliente.java`, `MenuSolicitudes.java`
+
+---
+
+## **CU-029: Eliminar Amistad Bidireccional**
+
+**Iteracion:** 3
+**Actor:** Usuario Autenticado
+**Precondiciones:** Ambos clientes son amigos
+
+**Flujo Normal:**
+```
+1. Usuario selecciona "Eliminar amistad"
+2. Usuario ingresa ID del amigo a eliminar
+3. Sistema valida que son amigos
+4. Si valido:
+   - Sistema elimina B de amistades de A (O(1))
+   - Sistema elimina A de amistades de B (O(1))
+   - Sistema muestra: "[OK] Amistad eliminada con @{nombre} (ambos lados)"
+5. Si no son amigos:
+   - Sistema muestra: "[AVISO] No son amigos"
+```
+
+**Complejidad:** O(1)
+**Clases Involucradas:** `GestorRelaciones.java`, `Cliente.java`, `MenuSolicitudes.java`
+
+---
+
+## **CU-030: Ver Lista de Amigos**
+
+**Iteracion:** 3
+**Actor:** Usuario Autenticado
+**Precondiciones:** Usuario autenticado
+
+**Flujo Normal:**
+```
+1. Usuario selecciona "Amistades (bidireccionales)"
+2. Sistema obtiene IDs de amigos del Diccionario de amistades (O(k))
+3. Para cada ID:
+   - Sistema busca Cliente por ID (O(1))
+   - Sistema muestra: ID, Nombre, Scoring
+4. Sistema muestra total de amigos
+5. Si no tiene amigos:
+   - Sistema muestra "[AVISO] Sin amistades"
+```
+
+**Complejidad:** O(k) donde k = cantidad de amigos (max 2)
+**Clases Involucradas:** `MenuSolicitudes.java`, `GestorClientes.java`, `Cliente.java`
+
+---
+
+## **CU-031: Verificar si Son Amigos**
+
+**Iteracion:** 3
+**Actor:** Sistema
+**Precondiciones:** Ambos clientes existen
+
+**Flujo Normal:**
+```
+1. Sistema recibe IDs de dos clientes
+2. Sistema busca en Diccionario de amistades de A si contiene B (O(1))
+3. Retorna true/false
+4. Propiedad: sonAmigos(A, B) == sonAmigos(B, A) (simetrica)
+```
+
+**Complejidad:** O(1)
+**Clases Involucradas:** `Cliente.java`, `GestorRelaciones.java`
+
+---
+
+## **CU-032: Obtener Cantidad de Amigos**
+
+**Iteracion:** 3
+**Actor:** Sistema
+**Precondiciones:** Cliente existe
+
+**Flujo Normal:**
+```
+1. Sistema consulta cantidad de entradas en Diccionario de amistades (O(1))
+2. Retorna entero (0 a MAX_AMIGOS)
+3. Usado internamente para validar limite antes de agregar amistad
+```
+
+**Complejidad:** O(1)
+**Clases Involucradas:** `Cliente.java`
+
+---
+
+# ITERACION 3: ANALISIS DE DISTANCIA
+
+## **CU-033: Calcular Distancia (BFS)**
+
+**Iteracion:** 3
+**Actor:** Usuario Autenticado
+**Precondiciones:** Ambos clientes existen
+
+**Flujo Normal:**
+```
+1. Usuario selecciona "Calcular Distancia (BFS)"
+2. Usuario ingresa ID origen (0 = su propio ID)
+3. Usuario ingresa ID destino
+4. Sistema valida que ambos existen
+5. Sistema ejecuta BFS desde origen en grafo dirigido de seguimientos:
+   - Usa Cola para recorrer por niveles
+   - Usa Diccionario<ID, Boolean> como conjunto de visitados
+   - Cuenta saltos hasta encontrar destino
+6. Sistema muestra resultado:
+   - Si mismo cliente: "0 saltos (mismo cliente)"
+   - Si hay camino: "{N} salto(s)"
+   - Si no hay camino: "No existe camino entre estos clientes"
+7. Sistema muestra tiempo de BFS en ms
+```
+
+**Complejidad:** O(V+E) donde V = vertices, E = aristas
+**Clases Involucradas:** `GestorRelaciones.java`, `MenuSolicitudes.java`, `Cola.java`, `Diccionario.java`
+
+---
+
+## **CU-034: Encontrar Camino Mas Corto**
+
+**Iteracion:** 3
+**Actor:** Sistema
+**Precondiciones:** Origen y destino existen en el grafo
+
+**Flujo Normal:**
+```
+1. Sistema recibe IDs de origen y destino
+2. BFS garantiza camino mas corto en grafo no ponderado:
+   - Primer nivel: vecinos directos (1 salto)
+   - Segundo nivel: vecinos de vecinos (2 saltos)
+   - Se detiene al encontrar destino
+3. Si hay multiples caminos, BFS retorna el de menor saltos
+4. Retorna distancia (int) o -1 si no hay camino
+```
+
+**Complejidad:** O(V+E)
+**Clases Involucradas:** `GestorRelaciones.java`, `Cola.java`
+
+---
+
+## **CU-035: Verificar Conectividad**
+
+**Iteracion:** 3
+**Actor:** Sistema
+**Precondiciones:** Grafo dirigido construido
+
+**Flujo Normal:**
+```
+1. Sistema ejecuta BFS entre dos clientes (CU-033)
+2. Si distancia >= 0: estan conectados
+3. Si distancia == -1: no hay camino (componentes desconectadas)
+4. Nota: el grafo es DIRIGIDO, por lo que A conectado a B
+   no implica B conectado a A
+```
+
+**Complejidad:** O(V+E)
+**Clases Involucradas:** `GestorRelaciones.java`
+
+---
+
 # SISTEMA: PERSISTENCIA Y DATOS
 
 ## **CU-036: Cargar Clientes desde JSON**
@@ -902,11 +1103,19 @@ Complejidad: O(N + E) donde E = relaciones
 | CU-025 | 2 | Sistema | O(k log k) | CU_025_ObtenerSeguidoresOrdenados |
 | CU-026 | 2 | Usuario | O(N) | CU_026_ObtenerClientesCuartoNivel |
 | CU-027 | 2 | Usuario | O(log 101+k) | CU_027_ConsultarInfluenciaPorScoring |
+| CU-028 | 3 | Usuario | O(1) | CU_028_AgregarAmistadBidireccional |
+| CU-029 | 3 | Usuario | O(1) | CU_029_EliminarAmistadBidireccional |
+| CU-030 | 3 | Usuario | O(k) | CU_030_VerListaAmigos |
+| CU-031 | 3 | Sistema | O(1) | CU_031_VerificarSiSonAmigos |
+| CU-032 | 3 | Sistema | O(1) | CU_032_ObtenerCantidadAmigos |
+| CU-033 | 3 | Usuario | O(V+E) | CU_033_CalcularDistancia |
+| CU-034 | 3 | Sistema | O(V+E) | CU_034_EncontrarCaminoCorto |
+| CU-035 | 3 | Sistema | O(V+E) | CU_035_VerificarConectividad |
 | CU-036 | Todas | Sistema | O(N) | CU_036_CargarClientesDesdeJson |
 | CU-037 | Todas | Sistema | O(N) | CU_037_GuardarCambiosEnJson |
 | CU-038 | Todas | Sistema | O(N+E) | CU_038_ValidarIntegridadDatos |
 
-**TOTAL: 30 Casos de Uso**
+**TOTAL: 38 Casos de Uso**
 
 ---
 
@@ -914,27 +1123,64 @@ Complejidad: O(N + E) donde E = relaciones
 
 ## Suite de Tests
 
-La carpeta `test/casos_de_uso/` contiene **tests de integracion** para validar los **30 casos de uso** del sistema:
+La carpeta `test/casos_de_uso/` contiene **tests de integracion** para validar los **38 casos de uso** del sistema:
 
 ```
 test/casos_de_uso/
-+-- CasosDeUsoTests.java           # Coordinador maestro (30 tests)
-+-- CU_001_IniciarSesion.java
-+-- CU_002_CerrarSesion.java
-+-- ... (todos los 30 tests)
++-- CasosDeUsoTests.java           # Coordinador maestro (38 tests)
++-- CU_001_IniciarSesion.java      # 4 tests
++-- CU_002_CerrarSesion.java       # 3 tests
++-- CU_003_AgregarCliente.java     # 5 tests
++-- CU_004_BuscarClientePorId.java # 4 tests
++-- CU_005_BuscarClientesPorNombre.java   # 4 tests
++-- CU_006_BuscarClientesPorScoring.java  # 4 tests
++-- CU_007_ListarTodosClientes.java       # 3 tests
++-- CU_008_EliminarCliente.java           # 3 tests
++-- CU_009_SeguidorUsuario.java           # 6 tests (incluye seguidores ilimitados)
++-- CU_010_DejarDeSeguir.java             # 3 tests
++-- CU_011_VerListaSeguidos.java          # 2 tests
++-- CU_012_VerListaSeguidores.java        # 1 test
++-- CU_013_EnviarSolicitud.java           # 4 tests
++-- CU_014_VerSolicitudPendiente.java     # 1 test
++-- CU_015_AceptarSolicitud.java          # 1 test
++-- CU_016_RechazarSolicitud.java         # 1 test
++-- CU_017_VerCantidadSolicitudes.java    # 1 test
++-- CU_018_VerHistorial.java              # 1 test
++-- CU_019_DeshacerAccion.java            # 1 test
++-- CU_020_ReHacerAccion.java             # 1 test
++-- CU_021_LimpiarHistorial.java          # 1 test
++-- CU_022_ObtenerVecinos.java            # 1 test
++-- CU_023_ConstruirArbolRelaciones.java  # 1 test
++-- CU_024_ObtenerSeguidoresEnNivel.java  # 1 test
++-- CU_025_ObtenerSeguidoresOrdenados.java # 1 test
++-- CU_026_ObtenerClientesCuartoNivel.java # 1 test
++-- CU_027_ConsultarInfluenciaPorScoring.java # 1 test
++-- CU_028_AgregarAmistadBidireccional.java   # 8 tests (incluye MAX_AMIGOS)
++-- CU_029_EliminarAmistadBidireccional.java  # 3 tests
++-- CU_030_VerListaAmigos.java                # 3 tests
++-- CU_031_VerificarSiSonAmigos.java          # 3 tests
++-- CU_032_ObtenerCantidadAmigos.java         # 3 tests (incluye limite MAX_AMIGOS)
++-- CU_033_CalcularDistancia.java             # 5 tests
++-- CU_034_EncontrarCaminoCorto.java          # 3 tests
++-- CU_035_VerificarConectividad.java         # 3 tests
++-- CU_036_CargarClientesDesdeJson.java       # 1 test
++-- CU_037_GuardarCambiosEnJson.java          # 1 test
++-- CU_038_ValidarIntegridadDatos.java        # 1 test
 |
 +-- edge_cases/
-|   +-- EdgeCaseTests.java         # Coordinador (4 edge case suites)
-|   +-- EC_001_ValoresNull.java
-|   +-- EC_002_ValoresVacios.java
-|   +-- EC_003_ValoresNegativos.java
-|   +-- EC_004_LimitesScoring.java
+|   +-- EdgeCaseTests.java         # Coordinador (5 edge case suites)
+|   +-- EC_001_ValoresNull.java    # 3 tests
+|   +-- EC_002_ValoresVacios.java  # 3 tests
+|   +-- EC_003_ValoresNegativos.java # 2 tests
+|   +-- EC_004_LimitesScoring.java # 4 tests
+|   +-- EC_005_LimitesRelaciones.java # 9 tests (seguidos, seguidores, amigos)
 |
 +-- performance/
-    +-- PerformanceTests.java      # Coordinador (4 performance suites)
+    +-- PerformanceTests.java      # Coordinador (5 performance suites)
     +-- PERF_001_BusquedaPorIdO1.java
     +-- PERF_002_ListarTodosON.java
     +-- PERF_003_BusquedaABBOlogN.java
+    +-- PERF_004_DistanciaBFS.java
     +-- PERF_005_EscalabilidadMuchosClientes.java
 ```
 
@@ -948,12 +1194,26 @@ test/casos_de_uso/
 - Estado posterior a operacion
 - Complejidad esperada
 
-### Relaciones (CU-009 a CU-012, CU-022 a CU-027):
+### Relaciones dirigidas (CU-009 a CU-012, CU-022 a CU-027):
 - Crear relacion valida
 - Validaciones (no auto, no duplicados)
-- Bidireccionalidad
-- Limites (max 2 seguidos)
+- Bidireccionalidad (siguiendo/seguidores)
+- Limite MAX_SEGUIDOS=2
+- Seguidores ilimitados (sin tope)
 - Operaciones inversas
+
+### Amistades bidireccionales (CU-028 a CU-032):
+- Agregar/eliminar amistad
+- Bidireccionalidad (A amigo de B <=> B amigo de A)
+- Limite MAX_AMIGOS=2 (ambos lados)
+- Fallo atomico (si uno esta lleno, ninguno se modifica)
+- Liberar cupo al eliminar
+
+### Distancia BFS (CU-033 a CU-035):
+- Camino directo e indirecto
+- Sin camino (componentes desconectadas)
+- Grafo dirigido (A->B no implica B->A)
+- Cliente inexistente
 
 ### Solicitudes (CU-013 a CU-017):
 - Enviar solicitud valida
@@ -962,17 +1222,28 @@ test/casos_de_uso/
 - Multiples solicitudes
 - Rechazo/Aceptacion
 
-### Para CU de Historial (CU-018 a CU-021):
+### Historial (CU-018 a CU-021):
 - Ver historial completo
 - Undo funciona correctamente
 - Redo funciona correctamente
 - Cascada de cambios se revierte
 
-### Para CU de Persistencia (CU-036 a CU-038):
+### Persistencia (CU-036 a CU-038):
 - Carga desde JSON correcta
 - Guardado en JSON correcto
 - Validaciones de integridad
-- Recuperacion de errores
+- Round-trip amistades + seguimientos
+
+## Reglas de Negocio Validadas por Tests
+
+| Regla | Constante | Test |
+|-------|-----------|------|
+| Maximo seguidos por cliente | `MAX_SEGUIDOS=2` | CU_009, EC_005 |
+| Seguidores sin limite | (sin tope) | CU_009, EC_005 |
+| Maximo amigos por cliente | `MAX_AMIGOS=2` | CU_028, CU_032, EC_005 |
+| Limite bidireccional (ambos lados) | `MAX_AMIGOS=2` | CU_028, EC_005 |
+| Liberar cupo al eliminar | - | EC_005 |
+| Fallo no corrompe estado | - | CU_028, EC_005 |
 
 ## Principios de Testing
 
@@ -984,11 +1255,11 @@ test/casos_de_uso/
 
 ## Cobertura de Tests
 
-| Categoria | Cantidad | Descripcion |
-|-----------|----------|-------------|
-| **Casos de Uso** | 30 | Funcionalidad de cada CU |
-| **Edge Cases** | 4 | Valores null, vacio, negativos, limites |
-| **Performance** | 4 | Validacion de complejidades Big O |
-| **TOTAL** | 38+ | Tests completamente funcionales |
+| Categoria | Suites | Tests individuales | Descripcion |
+|-----------|--------|-------------------|-------------|
+| **Casos de Uso** | 38 | 87 | Funcionalidad de cada CU |
+| **Edge Cases** | 5 | 21 | Null, vacio, negativos, scoring, relaciones |
+| **Performance** | 5 | 6 | Validacion de complejidades Big O |
+| **TOTAL** | **48** | **114** | Tests completamente funcionales |
 
 ---

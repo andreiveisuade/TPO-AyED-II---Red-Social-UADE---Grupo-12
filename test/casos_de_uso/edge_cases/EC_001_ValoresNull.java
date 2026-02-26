@@ -19,17 +19,13 @@ public class EC_001_ValoresNull {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  EC-001: VALIDACIÓN DE NULL                ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  EC-001: VALIDACIÓN DE NULL");
 
         testBuscarIdNull();
         testAgregarNombreNull();
         testBuscarNombreNull();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("EC-001 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }

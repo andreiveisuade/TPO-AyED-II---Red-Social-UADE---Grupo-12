@@ -12,19 +12,18 @@ public class CU_028_AgregarAmistadBidireccional {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-028: AGREGAR AMISTAD BIDIRECCIONAL");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  CU-028: AGREGAR AMISTAD BIDIRECCIONAL");
 
         testAgregarAmistadRetornaTrue();
         testAmistadEsBidireccional();
         testAmistadDuplicadaRetornaFalse();
         testAmistadConsigoMismoRetornaFalse();
         testAmistadConClienteInexistente();
+        testLimiteMaxAmigos();
+        testLimiteMaxAmigosDelOtroLado();
+        testLimiteNoModificaNadaSiFalla();
 
-        System.out.println("\n" + "-".repeat(50));
-        System.out.printf("CU-028 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("-".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }
@@ -101,6 +100,76 @@ public class CU_028_AgregarAmistadBidireccional {
             reportarExito("amistad con cliente inexistente retorna false");
         } catch (Exception e) {
             reportarFallo("amistad con cliente inexistente retorna false", e.getMessage());
+        }
+    }
+
+    private static void testLimiteMaxAmigos() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+            int a = gestor.agregarCliente("Alice", 80);
+            int b = gestor.agregarCliente("Bob", 70);
+            int c = gestor.agregarCliente("Charlie", 60);
+            int d = gestor.agregarCliente("Diana", 50);
+
+            afirmar(gestor.agregarAmistad(a, b), "1ra amistad debe funcionar");
+            afirmar(gestor.agregarAmistad(a, c), "2da amistad debe funcionar");
+            afirmar(!gestor.agregarAmistad(a, d), "3ra amistad debe fallar (limite " + Cliente.MAX_AMIGOS + ")");
+            afirmar(!gestor.sonAmigos(a, d), "A y D no deben ser amigos");
+            afirmar(gestor.obtenerCantidadAmigos(a) == 2, "A debe tener exactamente 2 amigos");
+
+            reportarExito("limite MAX_AMIGOS=" + Cliente.MAX_AMIGOS);
+        } catch (Exception e) {
+            reportarFallo("limite MAX_AMIGOS", e.getMessage());
+        }
+    }
+
+    private static void testLimiteMaxAmigosDelOtroLado() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+            int a = gestor.agregarCliente("Alice", 80);
+            int b = gestor.agregarCliente("Bob", 70);
+            int c = gestor.agregarCliente("Charlie", 60);
+            int d = gestor.agregarCliente("Diana", 50);
+
+            // B ya tiene 2 amigos
+            gestor.agregarAmistad(b, c);
+            gestor.agregarAmistad(b, d);
+
+            // A intenta ser amigo de B, pero B ya esta lleno
+            afirmar(!gestor.agregarAmistad(a, b), "debe fallar porque B ya tiene " + Cliente.MAX_AMIGOS + " amigos");
+            afirmar(!gestor.sonAmigos(a, b), "A y B no deben ser amigos");
+
+            reportarExito("limite MAX_AMIGOS del otro lado");
+        } catch (Exception e) {
+            reportarFallo("limite MAX_AMIGOS del otro lado", e.getMessage());
+        }
+    }
+
+    private static void testLimiteNoModificaNadaSiFalla() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+            int a = gestor.agregarCliente("Alice", 80);
+            int b = gestor.agregarCliente("Bob", 70);
+            int c = gestor.agregarCliente("Charlie", 60);
+            int d = gestor.agregarCliente("Diana", 50);
+
+            gestor.agregarAmistad(b, c);
+            gestor.agregarAmistad(b, d);
+
+            int amigosA = gestor.obtenerCantidadAmigos(a);
+            int amigosB = gestor.obtenerCantidadAmigos(b);
+
+            gestor.agregarAmistad(a, b); // debe fallar
+
+            afirmar(gestor.obtenerCantidadAmigos(a) == amigosA, "A no debe haber cambiado");
+            afirmar(gestor.obtenerCantidadAmigos(b) == amigosB, "B no debe haber cambiado");
+
+            reportarExito("fallo no modifica estado de ninguno");
+        } catch (Exception e) {
+            reportarFallo("fallo no modifica estado", e.getMessage());
         }
     }
 

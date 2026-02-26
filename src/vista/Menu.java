@@ -24,11 +24,15 @@ public class Menu {
     private String mensajeEstado;
 
     public Menu() {
-        this.gestor = new GestorClientes();
+        this(null);
+    }
+
+    public Menu(String dbPath) {
+        this.gestor = (dbPath != null) ? new GestorClientes(dbPath) : new GestorClientes();
         this.scanner = new Scanner(System.in);
         this.utils = new MenuUtils(scanner);
         this.mensajeEstado = "";
-        
+
         /* Inicializa los submenús */
         this.menuHistorial = new MenuHistorial(gestor, scanner);
         this.menuSolicitudes = new MenuSolicitudes(gestor, scanner);
@@ -47,8 +51,8 @@ public class Menu {
         System.out.println("|" + utils.centrar("BIENVENIDO A RED SOCIAL - UADE", 48) + "|");
         System.out.println("+" + "-".repeat(48) + "+");
         System.out.println();
-        System.out.println("Para comenzar, ingresa tu ID de usuario (o 0 para Salir):");
-        System.out.println("(IDs disponibles: 1 a 1,000,000+)");
+        int total = gestor.getCantidadClientes();
+        System.out.println("Ingresa tu ID de usuario (0 = Salir) | " + total + " clientes cargados");
         System.out.println();
         
         boolean usuarioValido = false;
@@ -63,7 +67,7 @@ public class Menu {
             }
             
             if (userId < 0) {
-                System.out.println("[ERROR] El ID debe ser un numero positivo.");
+                System.out.println("[ERROR] ID debe ser positivo");
                 continue;
             }
 
@@ -73,16 +77,13 @@ public class Menu {
                 usuarioValido = true;
                 getSesion().iniciarSesion(cliente);
                 System.out.println();
-                System.out.println("[OK] Hola, " + cliente.getNombre() + "! Bienvenido a la red social.");
-                
+                System.out.println("[OK] Hola, " + cliente.getNombre() + "!");
+
                 if (getSesion().tieneSolicitudesPendientes()) {
-                    int cantSolicitudes = getSesion().getCantidadSolicitudesPendientes();
-                    System.out.println("[AVISO] Tienes " + cantSolicitudes + " solicitud(es) de seguimiento pendiente(s)");
+                    System.out.println("[AVISO] " + getSesion().getCantidadSolicitudesPendientes() + " solicitudes pendientes");
                 }
             } else {
-                System.out.println("[ERROR] El ID '" + userId + "' no existe en el sistema.");
-                System.out.println("  Por favor ingresa un ID valido registrado.");
-                System.out.println();
+                System.out.println("[ERROR] ID " + userId + " no existe");
             }
         }
         
@@ -110,7 +111,7 @@ public class Menu {
             } while (opcion != 0);
             
             if (getSesion().estaAutenticado()) {
-                System.out.println("\nCerrando sesion de " + getSesion().getNombreUsuarioActual() + "...");
+                System.out.println("\nSesion cerrada: " + getSesion().getNombreUsuarioActual());
                 getSesion().cerrarSesion();
                 pausar(scanner);
             }
@@ -142,8 +143,8 @@ public class Menu {
     }
 
     private void mostrarMenuPrincipal() {
-        System.out.println(" 1. Amigos & Red Social - Explorar, seguir y solicitudes");
-        System.out.println(" 2. Historial           - Acciones realizadas");
+        System.out.println(" 1. Amigos & Red Social");
+        System.out.println(" 2. Historial");
         System.out.println(" 0. Salir");
         imprimirSeparador(MenuUtils.ANCHO);
         
@@ -152,7 +153,7 @@ public class Menu {
             mensajeEstado = "";
         }
         
-        System.out.print("Opción: ");
+        System.out.print("Opcion: ");
     }
 
     private void procesarOpcionPrincipal(int opcion) {
@@ -166,7 +167,7 @@ public class Menu {
             case 0:
                 break;
             default:
-                mensajeEstado = "Opción no válida";
+                mensajeEstado = "Opcion no valida";
         }
     }
 }

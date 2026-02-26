@@ -25,18 +25,14 @@ public class CU_001_IniciarSesion {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-001: INICIAR SESIÓN                    ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  CU-001: INICIAR SESIÓN");
 
         testIniciarSesionConIDValido();
         testIniciarSesionConIDInvalido();
         testSesionSingleton();
         testObtenerDatosUsuarioAutenticado();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("CU-001 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) {
             System.exit(1);
@@ -126,12 +122,12 @@ public class CU_001_IniciarSesion {
 
     private static void reportarExito(String testName) {
         testsPasados++;
-        System.out.println("  [✓] " + testName);
+        System.out.println("  [OK] " + testName);
     }
 
     private static void reportarFallo(String testName, String error) {
         testsFallados++;
-        System.err.println("  [✗] " + testName);
+        System.err.println("  [FAIL] " + testName);
         System.err.println("      Error: " + error);
     }
 }

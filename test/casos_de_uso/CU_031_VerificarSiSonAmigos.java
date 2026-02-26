@@ -12,17 +12,13 @@ public class CU_031_VerificarSiSonAmigos {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-031: VERIFICAR SI SON AMIGOS");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  CU-031: VERIFICAR SI SON AMIGOS");
 
         testSonAmigosTrue();
         testSonAmigosFalse();
         testSonAmigosBidireccional();
 
-        System.out.println("\n" + "-".repeat(50));
-        System.out.printf("CU-031 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("-".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }

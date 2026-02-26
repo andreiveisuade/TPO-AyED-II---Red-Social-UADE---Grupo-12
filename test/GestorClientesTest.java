@@ -25,9 +25,7 @@ public class GestorClientesTest {
     }
 
     public static void main(String[] args) {
-        System.out.println("═══════════════════════════════════════════");
-        System.out.println("   TESTS DE GESTOR CLIENTES               ");
-        System.out.println("═══════════════════════════════════════════\n");
+        System.out.println("── GestorClientesTest ───────────────────────────");
 
         testAgregarClienteValido();
         testAgregarClienteDuplicado();
@@ -56,9 +54,7 @@ public class GestorClientesTest {
         testBuscarPorScoringMuchosDuplicados();
         testAgregarClientePostBuildScoring();
 
-        System.out.println("\n═══════════════════════════════════════════");
-        System.out.printf("RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("═══════════════════════════════════════════");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) {
             System.exit(1);
@@ -593,12 +589,12 @@ public class GestorClientesTest {
     // ═══════════════════════════════════════════════════════════════════
 
     private static void reportarExito(String nombre) {
-        System.out.printf("✅ %s%n", nombre);
+        System.out.println("  [OK] " + nombre);
         testsPasados++;
     }
 
     private static void reportarFallo(String nombre, String mensaje) {
-        System.out.printf("❌ %s: %s%n", nombre, mensaje);
+        System.out.println("  [FAIL] " + nombre + ": " + mensaje);
         testsFallados++;
     }
 }

@@ -14,19 +14,15 @@ public class EdgeCaseTests {
     private static int testsFallados = 0;
 
     public static void main(String[] args) {
-        System.out.println("\n" + "═".repeat(70));
-        System.out.println("         EDGE CASE TESTS - VALIDACIÓN DE LÍMITES");
-        System.out.println("═".repeat(70) + "\n");
+        System.out.println("── Edge Cases ───────────────────────────────────");
 
         ejecutarTest("EC_001_ValoresNull");
         ejecutarTest("EC_002_ValoresVacios");
         ejecutarTest("EC_003_ValoresNegativos");
         ejecutarTest("EC_004_LimitesScoring");
+        ejecutarTest("EC_005_LimitesRelaciones");
 
-        // Resumen final
-        System.out.println("\n" + "═".repeat(70));
-        System.out.printf("EDGE CASES RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("═".repeat(70) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) {
             System.exit(1);
@@ -39,10 +35,9 @@ public class EdgeCaseTests {
             java.lang.reflect.Method main = clazz.getMethod("main", String[].class);
             main.invoke(null, (Object) new String[]{});
             testsPasados++;
-            System.out.println("[OK] " + nombreClase);
         } catch (Exception e) {
             testsFallados++;
-            System.err.println("[FAIL] " + nombreClase + ": " + e.getMessage());
+            System.err.println("  [FAIL] " + nombreClase + ": " + e.getMessage());
         }
     }
 }

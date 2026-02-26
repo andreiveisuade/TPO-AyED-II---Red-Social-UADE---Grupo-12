@@ -47,7 +47,8 @@ public class PersistenciaClientes {
      * @return Diccionario de clientes cargados con capacidad óptima
      */
     public Diccionario<Integer, Cliente> cargarDesdeArchivo() {
-        System.out.println("Cargando clientes...");
+        if (System.getProperty("test.quiet") == null)
+            System.out.println("Cargando clientes...");
 
         try (FileReader reader = new FileReader(archivoPath)) {
             Gson gson = new Gson();
@@ -99,7 +100,8 @@ public class PersistenciaClientes {
      * @param clientes Diccionario de clientes a guardar
      */
     public void guardarCambios(Diccionario<Integer, Cliente> clientes) {
-        System.out.println("Guardando datos en " + archivoPath + "...");
+        if (System.getProperty("test.quiet") == null)
+            System.out.println("Guardando datos en " + archivoPath + "...");
         try (FileWriter writer = new FileWriter(archivoPath)) {
             Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
@@ -121,7 +123,8 @@ public class PersistenciaClientes {
             }
 
             gson.toJson(wrapper, writer);
-            System.out.println("Datos guardados exitosamente.");
+            if (System.getProperty("test.quiet") == null)
+                System.out.println("Datos guardados exitosamente.");
         } catch (IOException e) {
             System.err.println("Error guardando datos: " + e.getMessage());
         }

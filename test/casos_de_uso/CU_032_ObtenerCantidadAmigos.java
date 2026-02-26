@@ -12,17 +12,13 @@ public class CU_032_ObtenerCantidadAmigos {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-032: OBTENER CANTIDAD DE AMIGOS");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  CU-032: OBTENER CANTIDAD DE AMIGOS");
 
         testCantidadCero();
         testCantidadUno();
         testCantidadMultiple();
 
-        System.out.println("\n" + "-".repeat(50));
-        System.out.printf("CU-032 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("-".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }
@@ -69,11 +65,12 @@ public class CU_032_ObtenerCantidadAmigos {
             int d = gestor.agregarCliente("Diana", 50);
             gestor.agregarAmistad(a, b);
             gestor.agregarAmistad(a, c);
-            gestor.agregarAmistad(a, d);
+            boolean tercera = gestor.agregarAmistad(a, d);
 
             int cantidad = gestor.obtenerCantidadAmigos(a);
-            afirmar(cantidad == 3, "Alice debe tener 3 amigos, tiene: " + cantidad);
-            reportarExito("cantidad 3 con multiples amistades");
+            afirmar(cantidad == Cliente.MAX_AMIGOS, "Alice debe tener " + Cliente.MAX_AMIGOS + " amigos, tiene: " + cantidad);
+            afirmar(!tercera, "3ra amistad debe fallar por limite MAX_AMIGOS=" + Cliente.MAX_AMIGOS);
+            reportarExito("cantidad " + Cliente.MAX_AMIGOS + " (limite MAX_AMIGOS)");
         } catch (Exception e) {
             reportarFallo("cantidad multiple", e.getMessage());
         }

@@ -19,22 +19,18 @@ public class PERF_005_EscalabilidadMuchosClientes {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  PERF-005: ESCALABILIDAD                  ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  PERF-005: ESCALABILIDAD");
 
         testEscalabilidad();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("PERF-005 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }
 
     private static void testEscalabilidad() {
         try {
-            System.out.println("  Prueba con 10,000 clientes...");
+            System.out.println("    Prueba con 10,000 clientes...");
             initTestDB(10000);
             GestorClientes gestor = new GestorClientes(TEST_DB);
 
@@ -45,8 +41,8 @@ public class PERF_005_EscalabilidadMuchosClientes {
             long tiempoO1 = System.nanoTime() - inicio;
 
             assert cliente != null : "Encuentra en 10k";
-            System.out.println("  Tiempo búsqueda en 10k clientes: " + tiempoO1 + "ns");
-            System.out.println("  Escalabilidad O(1) confirmada");
+            System.out.println("    Tiempo búsqueda en 10k clientes: " + tiempoO1 + "ns");
+            System.out.println("    Escalabilidad O(1) confirmada");
 
             reportarExito("Escalabilidad 10k clientes");
         } catch (AssertionError e) {

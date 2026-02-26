@@ -5,16 +5,24 @@ import util.ResultadoValidacion;
 import util.Validador;
 
 /*
-Representa un cliente del sistema con capacidad de seguir a otros clientes.
+Representa un cliente del sistema con capacidad de seguir a otros clientes
+y establecer relaciones de amistad bidireccional.
 
 INVARIANTE DE REPRESENTACIÓN:
 - id > 0
 - nombre != null && !nombre.trim().isEmpty()
 - 0 <= scoring <= 100
-- siguiendo != null
-- No existen duplicados en siguiendo (garantizado por Diccionario)
-- Ningún cliente se sigue a sí mismo
+- siguiendo != null (Diccionario<Integer,Boolean> — lista de adyacencia dirigida)
+- seguidores != null (Diccionario<Integer,Boolean> — lista de adyacencia inversa)
+- amistades != null (Diccionario<Integer,Boolean> — lista de adyacencia no dirigida, Iteración 3)
 - solicitudesPendientes != null
+- No existen duplicados en siguiendo, seguidores ni amistades (garantizado por Diccionario)
+- Ningún cliente se sigue a sí mismo: !siguiendo.contiene(id)
+- Ningún cliente es amigo de sí mismo: !amistades.contiene(id)
+- Consistencia bidireccional de amistades: si A.amistades.contiene(B) → B.amistades.contiene(A)
+  (garantizado por GestorRelaciones.agregarAmistad/eliminarAmistad que opera en ambos lados)
+- Consistencia bidireccional de seguidores: si A.siguiendo.contiene(B) → B.seguidores.contiene(A)
+  (garantizado por GestorRelaciones.seguir/dejarDeSeguir que opera en ambos lados)
  */
 public class Cliente {
     
@@ -25,6 +33,7 @@ public class Cliente {
      * En iteraciones futuras puede incrementarse o eliminarse.
      */
     public static final int MAX_SEGUIDOS = 2;
+    public static final int MAX_AMIGOS = 2;
     
     /* Atributos */
     private int id;
@@ -230,13 +239,16 @@ public class Cliente {
     /*
     Agrega una amistad con otro cliente.
     Complejidad: O(1)
-    Retorna false si ya son amigos o si es él mismo.
+    Retorna false si ya son amigos, si es él mismo, o si alcanzó el límite MAX_AMIGOS.
     */
     public boolean agregarAmistad(int idAmigo) {
         if (idAmigo == this.id) {
             return false;
         }
         if (amistades.contiene(idAmigo)) {
+            return false;
+        }
+        if (amistades.getCantidad() >= MAX_AMIGOS) {
             return false;
         }
         amistades.insertar(idAmigo, true);

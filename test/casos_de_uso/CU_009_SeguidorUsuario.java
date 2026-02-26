@@ -26,19 +26,16 @@ public class CU_009_SeguidorUsuario {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-009: SEGUIR A UN USUARIO                ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  CU-009: SEGUIR A UN USUARIO");
 
         testSeguirUsuarioValido();
         testNoAutoSeguimiento();
         testNoSeguirDuplicado();
         testLimiteDe2Seguidos();
         testRelacionBidireccional();
+        testSeguidoresIlimitados();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("CU-009 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) {
             System.exit(1);
@@ -161,6 +158,30 @@ public class CU_009_SeguidorUsuario {
             reportarExito("Relación bidireccional");
         } catch (AssertionError e) {
             reportarFallo("Relación bidireccional", e.getMessage());
+        }
+    }
+
+    private static void testSeguidoresIlimitados() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+
+            Cliente bob = gestor.buscarPorId(2);
+            int cantidadSeguidores = 10;
+
+            // Crear 10 clientes que sigan a Bob
+            for (int i = 0; i < cantidadSeguidores; i++) {
+                int idNuevo = gestor.agregarCliente("User" + i, 50);
+                boolean r = gestor.seguir(idNuevo, 2);
+                assert r : "User" + i + " debe poder seguir a Bob";
+            }
+
+            assert bob.getCantidadSeguidores() == cantidadSeguidores
+                : "Bob debe tener " + cantidadSeguidores + " seguidores, tiene: " + bob.getCantidadSeguidores();
+
+            reportarExito("Seguidores ilimitados (" + cantidadSeguidores + " seguidores)");
+        } catch (AssertionError e) {
+            reportarFallo("Seguidores ilimitados", e.getMessage());
         }
     }
 

@@ -24,9 +24,7 @@ public class CU_003_AgregarCliente {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-003: AGREGAR CLIENTE                   ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  CU-003: AGREGAR CLIENTE");
 
         testAgregarClienteValido();
         testIdAutogenerado();
@@ -34,9 +32,7 @@ public class CU_003_AgregarCliente {
         testValidacionesScoring();
         testCantidadClientes();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("CU-003 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }

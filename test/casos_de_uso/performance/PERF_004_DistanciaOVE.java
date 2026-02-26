@@ -15,15 +15,11 @@ public class PERF_004_DistanciaOVE {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  PERF-004: DISTANCIA BFS O(V+E)            ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  PERF-004: DISTANCIA BFS O(V+E)");
 
         testDistanciaBFS();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("PERF-004 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }
@@ -38,9 +34,9 @@ public class PERF_004_DistanciaOVE {
             long tiempoBFS = System.nanoTime() - inicio;
 
             assert distancia == 3 : "Distancia correcta";
-            System.out.println("  Distancia 1 → 5: " + distancia);
-            System.out.println("  Tiempo BFS: " + tiempoBFS + "ns");
-            System.out.println("  V=5 vértices, E=5 aristas (1→2, 2→3, 2→4, 3→5, 4→5)");
+            System.out.println("    Distancia 1 → 5: " + distancia);
+            System.out.println("    Tiempo BFS: " + tiempoBFS + "ns");
+            System.out.println("    V=5 vértices, E=5 aristas (1→2, 2→3, 2→4, 3→5, 4→5)");
 
             reportarExito("BFS O(V+E)");
         } catch (AssertionError e) {

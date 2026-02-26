@@ -1,12 +1,47 @@
 @startuml Modelado TDA del Sistema
 !theme plain
+left to right direction
 skinparam backgroundColor #FEFEFE
 skinparam classAttributeIconSize 0
-skinparam defaultFontSize 11
-skinparam classFontSize 13
-skinparam stereotypeFontSize 10
+skinparam defaultFontSize 10
+skinparam classFontSize 12
+skinparam stereotypeFontSize 9
+skinparam noteFontSize 9
 
-title **Diagrama de Modelado y TDAs**\nTipos Abstractos de Datos Empleados
+title **Diagrama de Modelado y TDAs**\nArquitectura completa del sistema
+
+' ==========================================
+' CAPA DE VISTA (UI consola)
+' ==========================================
+package "vista" #E3F2FD {
+
+    class Main <<entry point>> {
+        + {static} main(String[]): void
+        - {static} seleccionarBaseDeDatos(): String
+    }
+
+    class Menu {
+        - gestor: GestorClientes
+        - menuHistorial: MenuHistorial
+        - menuSolicitudes: MenuSolicitudes
+        __
+        + iniciar(): void
+    }
+
+    class MenuSolicitudes {
+        + mostrar(): void
+        __
+        <color:teal>Iter 3: amistades, BFS, matrices</color>
+    }
+
+    class MenuHistorial {
+        + mostrar(): void
+    }
+
+    Main ..> Menu : crea
+    Menu "1" *-- "1" MenuSolicitudes
+    Menu "1" *-- "1" MenuHistorial
+}
 
 ' ==========================================
 ' ENTIDADES DE DOMINIO
@@ -16,26 +51,14 @@ package "modelo" #FFF3E0 {
     class Sesion <<Singleton>> {
         - {static} instancia: Sesion
         - usuarioActual: Cliente
-        - estaAutenticado: boolean
         - historial: HistorialAcciones
         __
-        - Sesion()
         + {static} getInstancia(): Sesion
         + iniciarSesion(Cliente): void
         + cerrarSesion(): void
-        + estaAutenticado(): boolean
-        + getUsuarioActual(): Cliente
-        + getHistorial(): HistorialAcciones
-        + tieneSolicitudesPendientes(): boolean
-        + getCantidadSolicitudesPendientes(): int
-        __
-        <color:gray>Patron Singleton: unica instancia</color>
-        <color:gray>- Constructor privado</color>
-        <color:gray>- Acceso via getInstancia()</color>
     }
 
     class Cliente {
-        + {static} MAX_SEGUIDOS: int = 2
         - id: int
         - nombre: String
         - scoring: int
@@ -43,50 +66,17 @@ package "modelo" #FFF3E0 {
         - seguidores: Diccionario<Integer, Boolean>
         - amistades: Diccionario<Integer, Boolean>
         - solicitudesPendientes: Cola<SolicitudSeguimiento>
-        - cacheSiguiendo: int[]
-        - cacheSeguidores: int[]
         __
-        + seguir(int): boolean
-        + dejarDeSeguir(int): boolean
-        + sigueA(int): boolean
-        + agregarSeguidor(int): void
-        + eliminarSeguidor(int): void
-        + getSiguiendo(): int[]
-        + getSeguidores(): int[]
-        + getCantidadSiguiendo(): int
-        + getCantidadSeguidores(): int
-        + recibirSolicitud(SolicitudSeguimiento): void
-        + procesarSiguienteSolicitud(): SolicitudSeguimiento
-        + verSiguienteSolicitud(): SolicitudSeguimiento
-        + tieneSolicitudesPendientes(): boolean
-        + getCantidadSolicitudesPendientes(): int
-        __
-        <color:blue>Iteracion 3 - Amistades:</color>
-        + agregarAmistad(int): boolean
-        + eliminarAmistad(int): boolean
+        + seguir(int) / dejarDeSeguir(int)
+        + agregarAmistad(int) / eliminarAmistad(int)
+        + esAmigoDE(int) / sigueA(int)
         + obtenerAmigos(): int[]
-        + getCantidadAmigos(): int
-        + esAmigoDE(int): boolean
-        + getAmistadesSerialized(): int[]
-        + cargarAmistades(int[]): void
-        __
-        <color:gray>Invariantes:</color>
-        <color:gray>- id > 0</color>
-        <color:gray>- 0 <= scoring <= 100</color>
-        <color:gray>- Cache invalidado en cada mutacion</color>
     }
 
     class Accion {
         - tipo: TipoAccion
         - datos: String[]
         - timestamp: LocalDateTime
-        __
-        + getTipo(): TipoAccion
-        + getDatos(): String[]
-        + getTimestamp(): LocalDateTime
-        + getDetalle(): String
-        __
-        <color:gray>Inmutable despues de creacion</color>
     }
 
     enum TipoAccion {
@@ -94,151 +84,92 @@ package "modelo" #FFF3E0 {
         DEJAR_DE_SEGUIR
     }
 
-    class SolicitudSeguimiento {
+    class SolicitudSeguimiento <<Value Object>> {
         - solicitante: String
         - objetivo: String
-        __
-        + getSolicitante(): String
-        + getObjetivo(): String
-        + getClave(): String
-        __
-        <color:gray>Value Object (inmutable)</color>
     }
 
-    Accion --> TipoAccion : tipo
-    Sesion *-- Cliente : usuarioActual
-    Cliente --> SolicitudSeguimiento : encola
+    Accion "1" --> "1" TipoAccion : tipo
+    Sesion "1" *-- "0..1" Cliente : usuarioActual
+    Cliente "1" --> "0..*" SolicitudSeguimiento : encola
 }
 
 ' ==========================================
-' TDA PILA (LIFO)
+' TDAs (Tipos Abstractos de Datos)
 ' ==========================================
 package "tda" #F3E5F5 {
 
     class "Pila<T>" as Pila <<TDA>> {
         - tope: NodoPila<T>
-        - cantidad: int
         ==
-        + apilar(T): void
-        + desapilar(): T
+        + apilar(T) / desapilar(): T
         + verTope(): T
-        + estaVacia(): boolean
-        + getCantidad(): int
-        + toArray(): Object[]
         ==
-        <b>Complejidad</b>
-        apilar: O(1)
-        desapilar: O(1)
-        verTope: O(1)
-        ==
-        <color:blue>LIFO</color>
+        O(1) todas | <color:blue>LIFO</color>
     }
-
-    class NodoPila<T> {
-        - dato: T
-        - siguiente: NodoPila<T>
-    }
-
-    Pila --> NodoPila : tope
-    NodoPila --> NodoPila : siguiente
-
-    ' ==========================================
-    ' TDA COLA (FIFO)
-    ' ==========================================
 
     class "Cola<T>" as Cola <<TDA>> {
         - frente: NodoCola<T>
         - fin: NodoCola<T>
-        - cantidad: int
         ==
-        + encolar(T): void
-        + desencolar(): T
+        + encolar(T) / desencolar(): T
         + verFrente(): T
-        + estaVacia(): boolean
-        + getCantidad(): int
         ==
-        <b>Complejidad</b>
-        encolar: O(1)
-        desencolar: O(1)
-        ==
-        <color:green>FIFO</color>
+        O(1) todas | <color:green>FIFO</color>
     }
-
-    class NodoCola<T> {
-        - dato: T
-        - siguiente: NodoCola<T>
-    }
-
-    Cola --> NodoCola : frente
-    Cola --> NodoCola : fin
-
-    ' ==========================================
-    ' TDA DICCIONARIO (HASH TABLE)
-    ' ==========================================
 
     class "Diccionario<K,V>" as Diccionario <<TDA>> {
         - tabla: NodoDiccionario<K,V>[]
-        - cantidad: int
         ==
-        + insertar(K, V): void
-        + obtener(K): V
-        + contiene(K): boolean
-        + eliminar(K): V
-        + getCantidad(): int
-        + estaVacio(): boolean
+        + insertar(K, V) / obtener(K): V
+        + contiene(K) / eliminar(K): V
         + obtenerClaves(): String[]
-        + obtenerValores(): Object[]
         ==
-        <b>Complejidad</b>
-        insertar: O(1) amortizado
-        obtener: O(1) amortizado
-        ==
-        <color:purple>Hash Table</color>
+        O(1) amortizado | <color:purple>Hash Table</color>
     }
 
-    class "NodoDiccionario<K,V>" as NodoDiccionario {
-        - clave: K
-        - valor: V
-        - siguiente: NodoDiccionario<K,V>
-    }
-
-    Diccionario --> NodoDiccionario : tabla[]
-    NodoDiccionario --> NodoDiccionario : siguiente
-
-    ' ==========================================
-    ' TDA ABB (Arbol Binario de Busqueda)
-    ' ==========================================
-
-    class "ArbolBinarioBusqueda<K,V>" as ABB <<TDA>> {
+    class "ABB<K,V>" as ABB <<TDA>> {
         - raiz: NodoABB<K,V>
-        - cantidad: int
         ==
-        + insertar(K, V): void
-        + buscar(K): Object[]
+        + insertar(K, V) / buscar(K): Object[]
         + eliminar(K, V): boolean
-        + estaVacio(): boolean
-        + getCantidad(): int
         + obtenerEnNivel(int): Object[]
-        + getAltura(): int
         + representarArbol(): String
         ==
-        <b>Complejidad (scoring)</b>
-        insertar: O(log 101)
-        buscar: O(log 101 + k)
+        O(log N) | <color:red>BST</color>
+    }
+
+    class Conjunto <<TDA>> {
+        - elementos: Diccionario<String, Boolean>
         ==
-        <color:red>Max 101 nodos</color>
+        + agregar(String) / contiene(String)
+        ==
+        O(1) | <color:orange>Set</color>
     }
 
-    class "NodoABB<K,V>" as NodoABB {
-        - clave: K
-        - valor: V
-        - izquierdo: NodoABB<K,V>
-        - derecho: NodoABB<K,V>
+    ' Nodos internos (simplificados)
+    class NodoPila<T> <<internal>> {
+        dato: T
+        siguiente: NodoPila
+    }
+    class NodoCola<T> <<internal>> {
+        dato: T
+        siguiente: NodoCola
+    }
+    class NodoDiccionario<K,V> <<internal>> {
+        clave: K, valor: V
+        siguiente: NodoDiccionario
+    }
+    class NodoABB<K,V> <<internal>> {
+        clave: K, valor: V
+        izq: NodoABB, der: NodoABB
     }
 
-    ABB --> NodoABB : raiz
-    NodoABB --> NodoABB : izquierdo
-    NodoABB --> NodoABB : derecho
+    Pila "1" *-- "0..1" NodoPila : tope
+    Cola "1" *-- "0..1" NodoCola : frente/fin
+    Diccionario "1" *-- "0..*" NodoDiccionario : tabla[]
+    ABB "1" *-- "0..1" NodoABB : raiz
+    Conjunto "1" --> "1" Diccionario : "delega\n<String, Boolean>"
 }
 
 ' ==========================================
@@ -246,115 +177,56 @@ package "tda" #F3E5F5 {
 ' ==========================================
 package "servicio" #E8F5E9 {
 
-    class GestorClientes {
+    class GestorClientes <<Facade>> {
         - clientes: Diccionario<Integer, Cliente>
         - indices: IndiceClientes
         - gestorRelaciones: GestorRelaciones
         - persistencia: PersistenciaClientes
-        - proximoId: int
         ==
-        + agregarCliente(String, int): int
-        + agregarClienteConId(int, String, int): boolean
-        + buscarPorId(int): Cliente
-        + buscarPorNombre(String): Cliente[]
-        + buscarPorScoring(int): Cliente[]
-        + eliminarCliente(int): boolean
-        + obtenerTodosLosClientes(): Cliente[]
-        + obtenerClientesMasPopulares(int): Cliente[]
-        + obtenerClientesEnNivel(int): Cliente[]
-        ==
-        <color:blue>Relaciones (delega a GestorRelaciones):</color>
-        + seguir(int, int): boolean
-        + dejarDeSeguir(int, int): boolean
-        + obtenerVecinos(int): Cliente[]
-        + construirArbolRelaciones(int): ABB
-        + obtenerSeguidoresEnNivel(int, int): Cliente[]
-        + obtenerSeguidoresOrdenados(int): Cliente[]
-        ==
-        <color:teal>Iter 3 - Distancia (delega a GestorRelaciones):</color>
+        + agregarCliente() / eliminarCliente()
+        + buscarPorId() / buscarPorNombre() / buscarPorScoring()
+        __
+        <color:blue>Delega relaciones a GestorRelaciones:</color>
+        + seguir() / dejarDeSeguir()
+        + agregarAmistad() / eliminarAmistad()
         + calcularDistancia(int, int): int
-        ==
-        <color:teal>Iter 3 - Amistades (delega a GestorRelaciones):</color>
-        + agregarAmistad(int, int): boolean
-        + eliminarAmistad(int, int): boolean
-        + obtenerAmigos(int): Cliente[]
-        + obtenerCantidadAmigos(int): int
-        + sonAmigos(int, int): boolean
-        ==
-        <color:blue>Undo (solo SEGUIR/DEJAR_DE_SEGUIR):</color>
+        __
         + deshacer(): Accion
-        + verUltimaAccion(): Accion
-        + historialVacio(): boolean
-        ==
-        <color:gray>Usa Sesion.getInstancia()</color>
-        <color:gray>Delega indices a IndiceClientes</color>
     }
 
     class IndiceClientes {
         - indiceScoring: ABB<Integer, Cola<Cliente>>
         - indiceNombre: Diccionario<String, Cola<Cliente>>
-        - scoringIndexConstructed: boolean
-        - clientes: Diccionario<Integer, Cliente>
         ==
-        + agregarCliente(Cliente): void
-        + eliminarCliente(Cliente): void
-        + buscarPorNombre(String): Cliente[]
-        + buscarPorScoring(int): Cliente[]
-        + obtenerClientesEnNivel(int): Cliente[]
-        ==
-        <color:gray>SRP: Solo indexacion</color>
+        + buscarPorNombre(): Cliente[]
+        + buscarPorScoring(): Cliente[]
+        __
         <color:gray>Scoring: lazy loading</color>
     }
 
     class GestorRelaciones {
         - clientes: Diccionario<Integer, Cliente>
         ==
-        <color:blue>Seguimientos dirigidos:</color>
-        + seguir(int, int): boolean
-        + dejarDeSeguir(int, int): boolean
-        + obtenerVecinos(int): Cliente[]
-        + construirArbolRelaciones(int): ABB
-        + obtenerSeguidoresEnNivel(int, int): Cliente[]
-        + obtenerSeguidoresOrdenados(int): Cliente[]
-        + obtenerSeguidores(int): Cliente[]
-        + obtenerCantidadSeguidores(int): int
-        ==
-        <color:teal>Iter 3 - Distancia BFS:</color>
+        <color:blue>Seguimientos (grafo dirigido):</color>
+        + seguir() / dejarDeSeguir()
+        + construirArbolRelaciones(): ABB
+        __
+        <color:teal>Iter 3 - BFS:</color>
         + calcularDistancia(int, int): int
-        ==
-        <color:teal>Iter 3 - Amistades bidireccionales:</color>
-        + agregarAmistad(int, int): boolean
-        + eliminarAmistad(int, int): boolean
-        + obtenerAmigos(int): Cliente[]
-        + obtenerCantidadAmigos(int): int
-        + sonAmigos(int, int): boolean
-        ==
-        <color:gray>SRP: Solo relaciones</color>
-        <color:gray>BFS usa Cola + Diccionario visitados</color>
+        __
+        <color:teal>Iter 3 - Amistades (no dirigido):</color>
+        + agregarAmistad() / eliminarAmistad()
+        + sonAmigos() / obtenerAmigos()
+        __
+        <color:gray>BFS: Cola + Diccionario visitados</color>
     }
 
     class PersistenciaClientes {
-        - archivoPath: String
-        ==
         + cargarDesdeArchivo(): Diccionario
         + guardarCambios(Diccionario): void
-        ==
-        <color:gray>SRP: Solo I/O JSON</color>
-        <color:gray>Estrategia: Carga Inicial / Guardado Final</color>
+        __
+        <color:gray>Carga Inicial / Guardado Final</color>
         <color:gray>Capacidad dinamica: alfa = 0.75</color>
-        <color:gray>DTO incluye: amistades (iter 3)</color>
-    }
-
-    class NumerosPrimos <<utility>> {
-        - {static} CAPACIDAD_MINIMA: int = 17
-        - {static} FACTOR_CARGA: double = 0.75
-        ==
-        + {static} esPrimo(int): boolean
-        + {static} siguientePrimo(int): int
-        + {static} capacidadOptima(int): int
-        ==
-        <color:gray>Dimensiona Diccionarios</color>
-        <color:gray>alfa = 0.75 -> O(1) amortizado</color>
     }
 
     class HistorialAcciones {
@@ -362,109 +234,118 @@ package "servicio" #E8F5E9 {
         ==
         + registrar(Accion): void
         + extraerUltima(): Accion
-        + verUltima(): Accion
-        + estaVacio(): boolean
-        + getCantidad(): int
-        + obtenerTodas(): Accion[]
     }
 }
 
 ' ==========================================
-' RELACIONES PRINCIPALES CON CARDINALIDADES
+' RELACIONES CON CARDINALIDADES
 ' ==========================================
+
+' Vista -> Servicio
+Menu "1" --> "1" GestorClientes : gestor
+MenuSolicitudes "1" --> "1" GestorClientes : gestor
+MenuHistorial "1" --> "1" GestorClientes : gestor
+Menu ..> Sesion : "usa (Singleton)"
+MenuSolicitudes ..> Sesion : "usa (Singleton)"
 
 ' GestorClientes -> servicios delegados
 GestorClientes "1" --> "1" Diccionario : "clientes\n<Integer, Cliente>"
-GestorClientes "1" --> "1" IndiceClientes : "indices"
-GestorClientes "1" --> "1" GestorRelaciones : "gestorRelaciones"
-GestorClientes "1" --> "1" PersistenciaClientes : "persistencia"
-GestorClientes ..> "0..*" Cliente : "gestiona"
+GestorClientes "1" --> "1" IndiceClientes : indices
+GestorClientes "1" --> "1" GestorRelaciones : gestorRelaciones
+GestorClientes "1" --> "1" PersistenciaClientes : persistencia
+GestorClientes ..> "0..*" Cliente : gestiona
 GestorClientes ..> "1" Sesion : "usa (Singleton)"
-GestorClientes ..> "0..*" Accion : "crea"
-GestorClientes ..> NumerosPrimos : "capacidadOptima()"
-PersistenciaClientes ..> NumerosPrimos : "capacidadOptima()"
+GestorClientes ..> "0..*" Accion : crea
 
-' IndiceClientes
-IndiceClientes "1" --> "1" ABB : "indiceScoring\n<Integer, Cola<Cliente>>"
+' IndiceClientes -> TDAs
+IndiceClientes "1" --> "1" ABB : "indiceScoring\n<Int, Cola<Cliente>>"
 IndiceClientes "1" --> "1" Diccionario : "indiceNombre\n<String, Cola<Cliente>>"
 
-' GestorRelaciones
+' GestorRelaciones -> TDAs (BFS)
 GestorRelaciones ..> "0..*" Cliente : "gestiona relaciones"
 GestorRelaciones ..> ABB : "construye arbol"
 GestorRelaciones ..> Cola : "BFS: cola de recorrido"
 GestorRelaciones ..> Diccionario : "BFS: visitados\n<Integer, Boolean>"
 
-' Sesion (Singleton)
-Sesion "1" *-- "1" HistorialAcciones : "historial"
-Sesion "1" o-- "0..1" Cliente : "usuarioActual"
+' Sesion -> servicios
+Sesion "1" *-- "1" HistorialAcciones : historial
 
-' HistorialAcciones
-HistorialAcciones "1" --> "1" Pila : "usa internamente\n<Accion>"
+' HistorialAcciones -> TDA
+HistorialAcciones "1" --> "1" Pila : "usa\n<Accion>"
 
-' Cliente
+' Cliente -> TDAs
 Cliente "1" *-- "1" Cola : "solicitudesPendientes\n<SolicitudSeguimiento>"
 Cliente "1" *-- "1" Diccionario : "siguiendo\n<Integer, Boolean>"
 Cliente "1" *-- "1" Diccionario : "seguidores\n<Integer, Boolean>"
 Cliente "1" *-- "1" Diccionario : "amistades\n<Integer, Boolean>"
 
-' Accion
-Accion "1" --> "1" TipoAccion : "tiene tipo"
-
-' TDAs Internos
-Diccionario "1" *-- "0..*" NodoDiccionario
-Pila "1" *-- "0..1" NodoPila
-Cola "1" *-- "0..1" NodoCola
-ABB "1" *-- "0..1" NodoABB
-
-NodoPila "1" --> "0..1" NodoPila : "siguiente"
-NodoCola "1" --> "0..1" NodoCola : "siguiente"
-NodoDiccionario "1" --> "0..1" NodoDiccionario : "siguiente"
-NodoABB "1" --> "0..1" NodoABB : "izquierdo"
-NodoABB "1" --> "0..1" NodoABB : "derecho"
-
 ' ==========================================
-' NOTAS EXPLICATIVAS
+' GRAFOS IMPLICITOS (representacion conceptual)
 ' ==========================================
 
-note as N1
-<b>Por que estos TDAs?</b>
+note as NGRAFOS
+<b>GRAFOS — Representacion implicita con TDAs</b>
 
-<b>Diccionario (Hash Table)</b>
-- Busqueda de clientes O(1) por ID y nombre
-- Clave: Integer (ID), Valor: Cliente
-- Relaciones en Cliente: siguiendo, seguidores, amistades
-- BFS visitados: Diccionario<Integer, Boolean>
+El sistema modela <b>dos grafos</b> superpuestos
+sobre los mismos vertices (Clientes):
 
-<b>ABB (Arbol Binario)</b>
-- Indice por scoring: O(log 101 + k)
-- Cola<Cliente> por nodo, max 101 nodos
-- Arbol de relaciones: seguidores por scoring
-- Consulta por nivel (Iter 2: CU-023/024)
+<b>1. Grafo DIRIGIDO de seguimientos</b>
+   Vertices: N clientes (Diccionario principal)
+   Aristas: Cliente.siguiendo (ida) + Cliente.seguidores (inversa)
+   Implementacion: Diccionario<Integer, Boolean> por vertice
+   = <b>Lista de adyacencia distribuida</b>
+   Operaciones: seguir/dejarDeSeguir O(1), BFS O(V+E)
 
-<b>Pila (LIFO)</b>
-- 1 uso: Historial (undo)
-- Ultima accion = primera en deshacerse
+<b>2. Grafo NO DIRIGIDO de amistades (Iter 3)</b>
+   Vertices: N clientes
+   Aristas: Cliente.amistades (simetrica, ambos lados)
+   Implementacion: Diccionario<Integer, Boolean> por vertice
+   = <b>Lista de adyacencia distribuida</b>
+   Invariante: A amigo de B <=> B amigo de A
 
-<b>Cola (FIFO)</b>
-- Solicitudes de seguimiento en cada Cliente
-- Agrupacion de clientes por scoring en ABB
-- BFS: cola de nodos a visitar por nivel (Iter 3)
+<b>Algoritmo BFS (calcularDistancia)</b>
+   Cola<Integer> = frontera por niveles
+   Diccionario<Integer, Boolean> = conjunto visitados
+   Recorre el grafo dirigido (siguiendo)
+   Complejidad: O(V + E)
 end note
 
+' ==========================================
+' TABLAS INFORMATIVAS (abajo)
+' ==========================================
+
 legend bottom
-|= TDA |= Politica |= Uso Principal |= Ubicacion |
-| Pila | LIFO | Historial (undo) | Sesion (Singleton) |
-| Cola | FIFO | Solicitudes pendientes | Cliente |
-| Cola | FIFO | Clientes por scoring (ABB nodo) | IndiceClientes |
-| Cola | FIFO | Recorrido BFS por niveles (Iter 3) | GestorRelaciones |
-| Diccionario | Hash | Clientes por ID | GestorClientes |
-| Diccionario | Hash | Clientes por nombre | IndiceClientes |
-| Diccionario | Hash | Siguiendo (por cliente) | Cliente |
-| Diccionario | Hash | Seguidores (por cliente) | Cliente |
-| Diccionario | Hash | Amistades bidireccionales (Iter 3) | Cliente |
-| Diccionario | Hash | Visitados en BFS (Iter 3) | GestorRelaciones |
-| ABB | BST | Clientes por scoring (Cola/nodo) | IndiceClientes |
-| ABB | BST | Arbol relaciones (seguidores) | GestorRelaciones |
+|= TDA |= Politica |= Quien lo usa |= Para que |= Complejidad |
+| Diccionario<Int, Cliente> | Hash | GestorClientes | Indice primario de clientes por ID | insertar/obtener/eliminar: O(1) amort. |
+| Diccionario<String, Cola> | Hash | IndiceClientes | Indice secundario por nombre | insertar/obtener: O(1) amort. |
+| Diccionario<Int, Boolean> | Hash | Cliente | Lista de adyacencia: siguiendo (dirigido) | contiene/insertar/eliminar: O(1) amort. |
+| Diccionario<Int, Boolean> | Hash | Cliente | Lista de adyacencia: seguidores (dirigido inverso) | contiene/insertar/eliminar: O(1) amort. |
+| Diccionario<Int, Boolean> | Hash | Cliente | Lista de adyacencia: amistades (no dirigido, Iter 3) | contiene/insertar/eliminar: O(1) amort. |
+| Diccionario<Int, Boolean> | Hash | GestorRelaciones | Conjunto de visitados en BFS (Iter 3) | contiene: O(1) amort. |
+| ABB<Int, Cola<Cliente>> | BST | IndiceClientes | Indice por scoring (lazy loading, max 101 nodos) | insertar/buscar: O(log 101 + k) |
+| ABB<Int, Cliente> | BST | GestorRelaciones | Arbol de relaciones (seguidores por scoring) | construir: O(k log k), nivel: O(N) |
+| Pila<Accion> | LIFO | HistorialAcciones | Historial de acciones (undo) | apilar/desapilar: O(1) |
+| Cola<SolicitudSeguimiento> | FIFO | Cliente | Solicitudes de seguimiento pendientes | encolar/desencolar: O(1) |
+| Cola<Cliente> | FIFO | IndiceClientes | Agrupacion de clientes por scoring (nodo ABB) | encolar/desencolar: O(1) |
+| Cola<Integer> | FIFO | GestorRelaciones | Recorrido BFS por niveles (Iter 3) | encolar/desencolar: O(1) |
+| Conjunto | Set | tda | Elementos unicos (implementado sobre Diccionario) | agregar/contiene: O(1) amort. |
+
+|= Grafo |= Tipo |= Vertices |= Aristas (lista de adyacencia) |= Algoritmos |= Complejidad |
+| Seguimientos | Dirigido | Cliente (Diccionario principal) | siguiendo: Diccionario<Int,Bool> + seguidores (inversa) | BFS (calcularDistancia) | O(V+E) |
+| Amistades (Iter 3) | No dirigido | Cliente (Diccionario principal) | amistades: Diccionario<Int,Bool> (simetrica) | agregar/eliminar/consultar | O(1) amort. |
+
+|= Patron |= Implementacion |= Beneficio |
+| Singleton | Sesion (unica instancia global) | Una sola sesion activa |
+| Facade | GestorClientes (oculta complejidad interna) | API simplificada para la vista |
+| Value Object | SolicitudSeguimiento (inmutable) | Integridad referencial |
+| Command | HistorialAcciones (undo con Pila<Accion>) | Deshacer acciones SEGUIR/DEJAR_DE_SEGUIR |
+| DIP | Cada TDA implementa su interfaz (IPila, ICola, etc.) | Depender de abstracciones, no de implementaciones |
+
+|= Capa |= Color |= Clases |
+| vista | Azul | Main, Menu, MenuSolicitudes, MenuHistorial, MenuUtils, Terminal |
+| servicio | Verde | GestorClientes, GestorRelaciones, IndiceClientes, PersistenciaClientes, HistorialAcciones |
+| modelo | Naranja | Cliente, Sesion, Accion, TipoAccion, SolicitudSeguimiento |
+| tda | Violeta | Pila, Cola, Diccionario, ABB, Conjunto + nodos internos |
 
 |= Relacion |= Simbolo |= Significado |
 | Composicion | *-- | Parte vital (muere con el todo) |

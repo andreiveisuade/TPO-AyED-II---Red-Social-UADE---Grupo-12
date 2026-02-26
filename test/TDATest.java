@@ -25,9 +25,7 @@ public class TDATest {
 
     public static void main(String[] args) {
         initTestDB();
-        System.out.println("═══════════════════════════════════════════");
-        System.out.println("   TESTS UNITARIOS (MODO TEST DB)      ");
-        System.out.println("═══════════════════════════════════════════\n");
+        System.out.println("── TDATest ──────────────────────────────────────");
 
         testPilaOperacionesBasicas();
         testPilaEdgeCases();
@@ -60,9 +58,7 @@ public class TDATest {
         testDiccionarioHashNegativo();
         testClienteMaxSeguidos();
 
-        System.out.println("\n═══════════════════════════════════════════");
-        System.out.printf("RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("═══════════════════════════════════════════");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) {
             System.exit(1);
@@ -680,12 +676,12 @@ public class TDATest {
     // ═══════════════════════════════════════════════════════════════════
 
     private static void reportarExito(String nombre) {
-        System.out.printf("✅ %s%n", nombre);
+        System.out.println("  [OK] " + nombre);
         testsPasados++;
     }
 
     private static void reportarFallo(String nombre, String mensaje) {
-        System.out.printf("❌ %s: %s%n", nombre, mensaje);
+        System.out.println("  [FAIL] " + nombre + ": " + mensaje);
         testsFallados++;
     }
 }

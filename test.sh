@@ -8,145 +8,67 @@ cd "$DIR"
 # Fuentes comunes
 SRC_FILES="src/tda/*.java src/modelo/*.java src/servicio/*.java src/util/*.java src/interfaces/*.java"
 CP="lib/gson-2.10.1.jar"
+JAVA_OPTS="-ea -Dtest.quiet=true"
 FAILED=0
 
-echo "═══════════════════════════════════════════"
-echo "   COMPILACIÓN Y EJECUCIÓN DE TESTS        "
-echo "═══════════════════════════════════════════"
+echo "══════════════════════════════════════════════════"
+echo "  TESTS - RED SOCIAL UADE"
+echo "══════════════════════════════════════════════════"
 echo ""
 
-# ─── 1. TDATest ───
-echo "Compilando TDATest..."
-javac -cp "$CP" -d out test/TDATest.java $SRC_FILES
-if [ $? -eq 0 ]; then
-    java -ea -cp out:"$CP" TDATest
-    if [ $? -ne 0 ]; then FAILED=1; fi
-else
-    echo "❌ Error compilando TDATest"
-    FAILED=1
-fi
-
-echo ""
-
-# ─── 2. ABBTest ───
-echo "Compilando ABBTest..."
-javac -cp "$CP" -d out test/ABBTest.java $SRC_FILES
-if [ $? -eq 0 ]; then
-    java -ea -cp out:"$CP" ABBTest
-    if [ $? -ne 0 ]; then FAILED=1; fi
-else
-    echo "❌ Error compilando ABBTest"
-    FAILED=1
-fi
-
-echo ""
-
-# ─── 3. ClienteTest ───
-echo "Compilando ClienteTest..."
-javac -cp "$CP" -d out test/ClienteTest.java $SRC_FILES
-if [ $? -eq 0 ]; then
-    java -ea -cp out:"$CP" ClienteTest
-    if [ $? -ne 0 ]; then FAILED=1; fi
-else
-    echo "❌ Error compilando ClienteTest"
-    FAILED=1
-fi
-
-echo ""
-
-# ─── 4. GestorClientesTest ───
-echo "Compilando GestorClientesTest..."
-javac -cp "$CP" -d out test/GestorClientesTest.java $SRC_FILES
-if [ $? -eq 0 ]; then
-    java -ea -cp out:"$CP" GestorClientesTest
-    if [ $? -ne 0 ]; then FAILED=1; fi
-else
-    echo "❌ Error compilando GestorClientesTest"
-    FAILED=1
-fi
-
-echo ""
-
-# ─── 5. JsonLoaderTest ───
-echo "Compilando JsonLoaderTest..."
-javac -cp "$CP" -d out test/JsonLoaderTest.java $SRC_FILES
-if [ $? -eq 0 ]; then
-    java -ea -cp out:"$CP" JsonLoaderTest
-    if [ $? -ne 0 ]; then FAILED=1; fi
-else
-    echo "❌ Error compilando JsonLoaderTest"
-    FAILED=1
-fi
-
-echo ""
-
-# ─── 6. ColaSolicitudesTest ───
-echo "Compilando ColaSolicitudesTest..."
-javac -cp "$CP" -d out test/ColaSolicitudesTest.java $SRC_FILES
-if [ $? -eq 0 ]; then
-    java -ea -cp out:"$CP" ColaSolicitudesTest
-    if [ $? -ne 0 ]; then FAILED=1; fi
-else
-    echo "❌ Error compilando ColaSolicitudesTest"
-    FAILED=1
-fi
-
-echo ""
-
-# ─── 7. DistanciaTest ───
-echo "Compilando DistanciaTest..."
-javac -cp "$CP" -d out test/DistanciaTest.java $SRC_FILES
-if [ $? -eq 0 ]; then
-    java -ea -cp out:"$CP" DistanciaTest
-    if [ $? -ne 0 ]; then FAILED=1; fi
-else
-    echo "❌ Error compilando DistanciaTest"
-    FAILED=1
-fi
-
-echo ""
-
-# ─── 8. AmistadTest ───
-echo "Compilando AmistadTest..."
-javac -cp "$CP" -d out test/AmistadTest.java $SRC_FILES
-if [ $? -eq 0 ]; then
-    java -ea -cp out:"$CP" AmistadTest
-    if [ $? -ne 0 ]; then FAILED=1; fi
-else
-    echo "❌ Error compilando AmistadTest"
-    FAILED=1
-fi
-
-echo ""
-
-# ─── 9. Casos de Uso (Suite completa) ───
-echo "Compilando Casos de Uso..."
-javac -cp "$CP" -d out test/casos_de_uso/*.java test/casos_de_uso/edge_cases/*.java test/casos_de_uso/performance/*.java $SRC_FILES
-if [ $? -eq 0 ]; then
-    echo "Ejecutando CasosDeUsoTests..."
-    java -ea -cp out:"$CP" CasosDeUsoTests
-    if [ $? -ne 0 ]; then FAILED=1; fi
-
+# ─── Función auxiliar ───
+run_test() {
+    local name=$1
+    local src=$2
+    local class=$3
+    javac -cp "$CP" -d out $src $SRC_FILES 2>&1
+    if [ $? -eq 0 ]; then
+        java $JAVA_OPTS -cp out:"$CP" $class
+        if [ $? -ne 0 ]; then FAILED=1; fi
+    else
+        echo "  [FAIL] Error compilando $name"
+        FAILED=1
+    fi
     echo ""
-    echo "Ejecutando EdgeCaseTests..."
-    java -ea -cp out:"$CP" EdgeCaseTests
-    if [ $? -ne 0 ]; then FAILED=1; fi
+}
 
+# ─── Tests unitarios ───
+run_test "TDATest" "test/TDATest.java" "TDATest"
+run_test "ABBTest" "test/ABBTest.java" "ABBTest"
+run_test "ClienteTest" "test/ClienteTest.java" "ClienteTest"
+run_test "GestorClientesTest" "test/GestorClientesTest.java" "GestorClientesTest"
+run_test "JsonLoaderTest" "test/JsonLoaderTest.java" "JsonLoaderTest"
+run_test "ColaSolicitudesTest" "test/ColaSolicitudesTest.java" "ColaSolicitudesTest"
+run_test "DistanciaTest" "test/DistanciaTest.java" "DistanciaTest"
+run_test "AmistadTest" "test/AmistadTest.java" "AmistadTest"
+run_test "PersistenciaRoundTripTest" "test/PersistenciaRoundTripTest.java" "PersistenciaRoundTripTest"
+
+# ─── Suites ───
+javac -cp "$CP" -d out test/casos_de_uso/*.java test/casos_de_uso/edge_cases/*.java test/casos_de_uso/performance/*.java $SRC_FILES 2>&1
+if [ $? -eq 0 ]; then
+    java $JAVA_OPTS -cp out:"$CP" CasosDeUsoTests
+    if [ $? -ne 0 ]; then FAILED=1; fi
     echo ""
-    echo "Ejecutando PerformanceTests..."
-    java -ea -cp out:"$CP" PerformanceTests
+
+    java $JAVA_OPTS -cp out:"$CP" EdgeCaseTests
+    if [ $? -ne 0 ]; then FAILED=1; fi
+    echo ""
+
+    java $JAVA_OPTS -cp out:"$CP" PerformanceTests
     if [ $? -ne 0 ]; then FAILED=1; fi
 else
-    echo "Error compilando Casos de Uso"
+    echo "  [FAIL] Error compilando suites"
     FAILED=1
 fi
 
 echo ""
-echo "==========================================="
+echo "══════════════════════════════════════════════════"
 if [ $FAILED -ne 0 ]; then
-    echo "Algunos tests fallaron"
+    echo "  ALGUNOS TESTS FALLARON"
+    echo "══════════════════════════════════════════════════"
     exit 1
 else
-    echo "Todos los tests pasaron exitosamente"
+    echo "  TODOS LOS TESTS PASARON"
+    echo "══════════════════════════════════════════════════"
     exit 0
 fi

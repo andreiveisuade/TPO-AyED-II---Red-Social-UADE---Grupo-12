@@ -11,16 +11,12 @@ public class EC_003_ValoresNegativos {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  EC-003: VALORES NEGATIVOS                 ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  EC-003: VALORES NEGATIVOS");
 
         testScoringNegativo();
         testIdNegativo();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("EC-003 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }

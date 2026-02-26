@@ -27,9 +27,7 @@ public class CU_033_CalcularDistancia {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-033: CALCULAR DISTANCIA                 ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  CU-033: CALCULAR DISTANCIA");
 
         testDistanciaMismoUsuario();
         testDistanciaDirecta();
@@ -37,9 +35,7 @@ public class CU_033_CalcularDistancia {
         testDistanciaSinCamino();
         testDistanciaUsuarioInexistente();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("CU-033 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) {
             System.exit(1);

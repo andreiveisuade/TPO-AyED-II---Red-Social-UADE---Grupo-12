@@ -12,17 +12,13 @@ public class CU_007_ListarTodosClientes {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-007: LISTAR TODOS CLIENTES             ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  CU-007: LISTAR TODOS CLIENTES");
 
         testListarTodos();
         testListarVacio();
         testOrdenamiento();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("CU-007 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }

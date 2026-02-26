@@ -33,7 +33,7 @@ public class MenuHistorial {
             System.out.println(" 1. Ver ultima accion");
             System.out.println(" 2. Deshacer ultima accion");
             System.out.println(" 3. Ver historial completo");
-            System.out.println(" 0. <- Volver");
+            System.out.println(" 0. Volver");
             imprimirSeparador(MenuUtils.ANCHO);
             
             if (!mensaje.isEmpty()) {
@@ -41,7 +41,7 @@ public class MenuHistorial {
                 mensaje = "";
             }
             
-            System.out.print("Opción: ");
+            System.out.print("Opcion: ");
             opcion = utils.leerEntero();
 
             switch (opcion) {
@@ -75,7 +75,7 @@ public class MenuHistorial {
         if (accion != null) {
             return "[OK] Deshecho:\n  " + formatearAccion(accion);
         } else {
-            return "[AVISO] No hay acciones para deshacer";
+            return "[AVISO] Nada para deshacer";
         }
     }
 
@@ -86,12 +86,11 @@ public class MenuHistorial {
         Accion[] acciones = gestor.obtenerHistorialCompleto();
 
         if (acciones.length == 0) {
-            imprimirAviso("El historial esta vacio");
+            imprimirAviso("Historial vacio");
             return;
         }
 
-        System.out.println("Mostrando desde la mas reciente a la mas antigua:");
-        System.out.println();
+        System.out.println("Mas reciente a mas antigua:\n");
 
         for (int i = 0; i < acciones.length; i++) {
             Accion a = acciones[i];

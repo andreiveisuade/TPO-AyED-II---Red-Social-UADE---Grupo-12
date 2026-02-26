@@ -21,18 +21,14 @@ public class CU_005_BuscarClientesPorNombre {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-005: BUSCAR POR NOMBRE                 ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  CU-005: BUSCAR POR NOMBRE");
 
         testBuscarExistente();
         testBuscarInexistente();
         testCaseInsensitive();
         testMultiplesResultados();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("CU-005 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }

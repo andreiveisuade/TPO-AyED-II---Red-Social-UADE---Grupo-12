@@ -12,17 +12,13 @@ public class CU_010_DejarDeSeguir {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-010: DEJAR DE SEGUIR                  ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  CU-010: DEJAR DE SEGUIR");
 
         testDejarDeSeguirValido();
         testActualizaBidireccional();
         testDejarDeSeguirNoExistente();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("CU-010 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }

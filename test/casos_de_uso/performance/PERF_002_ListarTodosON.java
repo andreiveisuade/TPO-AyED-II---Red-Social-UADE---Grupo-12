@@ -19,15 +19,11 @@ public class PERF_002_ListarTodosON {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  PERF-002: LISTAR TODOS O(N)               ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  PERF-002: LISTAR TODOS O(N)");
 
         testListarON();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("PERF-002 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }
@@ -42,8 +38,8 @@ public class PERF_002_ListarTodosON {
             long tiempoN = System.nanoTime() - inicio;
 
             assert clientes.length == 1000 : "Obtiene 1000 clientes";
-            System.out.println("  Tiempo listar 1000 clientes: " + tiempoN + "ns");
-            System.out.println("  Promedio por cliente: " + (tiempoN / 1000.0) + "ns");
+            System.out.println("    Tiempo listar 1000 clientes: " + tiempoN + "ns");
+            System.out.println("    Promedio por cliente: " + (tiempoN / 1000.0) + "ns");
 
             reportarExito("Listar O(N)");
         } catch (AssertionError e) {

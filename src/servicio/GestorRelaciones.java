@@ -325,6 +325,14 @@ public class GestorRelaciones {
             return false;
         }
 
+        // Verificar que ambos tengan espacio antes de modificar nada
+        if (cliente1.getCantidadAmigos() >= Cliente.MAX_AMIGOS) {
+            return false;
+        }
+        if (cliente2.getCantidadAmigos() >= Cliente.MAX_AMIGOS) {
+            return false;
+        }
+
         if (cliente1.agregarAmistad(idCliente2)) {
             cliente2.agregarAmistad(idCliente1);
             return true;

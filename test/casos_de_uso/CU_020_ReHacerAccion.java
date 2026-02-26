@@ -13,15 +13,11 @@ public class CU_020_ReHacerAccion {
     }
     
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-020: REHACER ACCION");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  CU-020: REHACER ACCION");
         
         testMain();
         
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("CU-020 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
         
         if (testsFallados > 0) System.exit(1);
     }

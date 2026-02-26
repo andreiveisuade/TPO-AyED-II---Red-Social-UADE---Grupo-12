@@ -19,16 +19,12 @@ public class PERF_001_BusquedaPorIdO1 {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  PERF-001: BÚSQUEDA POR ID O(1)            ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  PERF-001: BÚSQUEDA POR ID O(1)");
 
         testBusquedaO1();
         testBusquedaEscalable();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("PERF-001 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }
@@ -43,7 +39,7 @@ public class PERF_001_BusquedaPorIdO1 {
             long tiempo1 = System.nanoTime() - inicio;
 
             assert cliente != null : "Encuentra ID 1";
-            System.out.println("  Tiempo búsqueda ID 1: " + tiempo1 + "ns");
+            System.out.println("    Tiempo búsqueda ID 1: " + tiempo1 + "ns");
 
             reportarExito("Búsqueda O(1)");
         } catch (AssertionError e) {
@@ -67,8 +63,8 @@ public class PERF_001_BusquedaPorIdO1 {
             var c2 = gestor.buscarPorId(900);
             long tiempo2 = System.nanoTime() - inicio2;
 
-            System.out.println("  Tiempo búsqueda ID 100: " + tiempo1 + "ns");
-            System.out.println("  Tiempo búsqueda ID 900: " + tiempo2 + "ns");
+            System.out.println("    Tiempo búsqueda ID 100: " + tiempo1 + "ns");
+            System.out.println("    Tiempo búsqueda ID 900: " + tiempo2 + "ns");
 
             assert c1 != null && c2 != null : "Encuentra ambos";
             // Tiempos deben ser similares (dentro de 10x)

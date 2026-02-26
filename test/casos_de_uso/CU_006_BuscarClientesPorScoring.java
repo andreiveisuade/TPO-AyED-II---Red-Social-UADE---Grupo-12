@@ -12,18 +12,14 @@ public class CU_006_BuscarClientesPorScoring {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-006: BUSCAR POR SCORING                ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  CU-006: BUSCAR POR SCORING");
 
         testBuscarScoring95();
         testBuscarScoring80();
         testBuscarInexistente();
         testLazyLoading();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("CU-006 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }

@@ -13,15 +13,11 @@ public class CU_036_CargarClientesDesdeJson {
     }
     
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-036: CARGAR JSON");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  CU-036: CARGAR JSON");
         
         testMain();
         
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("CU-036 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
         
         if (testsFallados > 0) System.exit(1);
     }

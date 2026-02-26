@@ -19,15 +19,11 @@ public class PERF_003_BusquedaABBOlogN {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  PERF-003: BÚSQUEDA ABB O(log N)           ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
+        System.out.println("\n  PERF-003: BÚSQUEDA ABB O(log N)");
 
         testBusquedaABB();
 
-        System.out.println("\n" + "─".repeat(50));
-        System.out.printf("PERF-003 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
+        System.out.printf("%n  %d pasados, %d fallados%n", testsPasados, testsFallados);
 
         if (testsFallados > 0) System.exit(1);
     }
@@ -42,8 +38,8 @@ public class PERF_003_BusquedaABBOlogN {
             long tiempoABB = System.nanoTime() - inicio;
 
             assert clientes.length > 0 : "Encuentra scoring";
-            System.out.println("  Tiempo búsqueda ABB (1000 clientes): " + tiempoABB + "ns");
-            System.out.println("  log(1000) = 10 comparaciones esperadas");
+            System.out.println("    Tiempo búsqueda ABB (1000 clientes): " + tiempoABB + "ns");
+            System.out.println("    log(1000) = 10 comparaciones esperadas");
 
             reportarExito("Búsqueda ABB O(log N)");
         } catch (AssertionError e) {
