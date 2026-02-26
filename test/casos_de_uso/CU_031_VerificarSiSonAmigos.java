@@ -4,38 +4,75 @@ import modelo.Cliente;
 public class CU_031_VerificarSiSonAmigos {
     private static int testsPasados = 0, testsFallados = 0;
     private static final String TEST_DB = "data/clientes_CU031_TEST.json";
-    
+
     private static void initTestDB() {
         try (java.io.FileWriter writer = new java.io.FileWriter(TEST_DB)) {
-            writer.write("{ \"clientes\": [{\"id\": 1, \"nombre\": \"Alice\", \"scoring\": 95, \"siguiendo\": [2], \"solicitudes\": [], \"seguidores\": [2], \"amistades\": [2]}, " +
-                    "{\"id\": 2, \"nombre\": \"Bob\", \"scoring\": 80, \"siguiendo\": [1], \"solicitudes\": [], \"seguidores\": [1], \"amistades\": [1]}]}");
+            writer.write("{ \"clientes\": [] }");
         } catch (java.io.IOException e) {}
     }
-    
+
     public static void main(String[] args) {
         System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-031: VERIFICAR AMISTAD");
+        System.out.println("║  CU-031: VERIFICAR SI SON AMIGOS");
         System.out.println("╚════════════════════════════════════════════╝\n");
-        
-        testMain();
-        
-        System.out.println("\n" + "─".repeat(50));
+
+        testSonAmigosTrue();
+        testSonAmigosFalse();
+        testSonAmigosBidireccional();
+
+        System.out.println("\n" + "-".repeat(50));
         System.out.printf("CU-031 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
-        
+        System.out.println("-".repeat(50) + "\n");
+
         if (testsFallados > 0) System.exit(1);
     }
-    
-    private static void testMain() {
+
+    private static void testSonAmigosTrue() {
         try {
             initTestDB();
             GestorClientes gestor = new GestorClientes(TEST_DB);
-            reportarExito("Test 031");
+            int a = gestor.agregarCliente("Alice", 80);
+            int b = gestor.agregarCliente("Bob", 70);
+            gestor.agregarAmistad(a, b);
+
+            afirmar(gestor.sonAmigos(a, b), "sonAmigos(A,B) debe ser true");
+            reportarExito("sonAmigos retorna true para amigos");
         } catch (Exception e) {
-            reportarFallo("Test 031", e.getMessage());
+            reportarFallo("sonAmigos retorna true", e.getMessage());
         }
     }
-    
-    private static void reportarExito(String testName) { testsPasados++; System.out.println("  [OK] " + testName); }
-    private static void reportarFallo(String testName, String error) { testsFallados++; System.err.println("  [FAIL] " + testName); }
+
+    private static void testSonAmigosFalse() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+            int a = gestor.agregarCliente("Alice", 80);
+            int b = gestor.agregarCliente("Bob", 70);
+
+            afirmar(!gestor.sonAmigos(a, b), "sonAmigos(A,B) debe ser false sin amistad");
+            reportarExito("sonAmigos retorna false para no-amigos");
+        } catch (Exception e) {
+            reportarFallo("sonAmigos retorna false", e.getMessage());
+        }
+    }
+
+    private static void testSonAmigosBidireccional() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+            int a = gestor.agregarCliente("Alice", 80);
+            int b = gestor.agregarCliente("Bob", 70);
+            gestor.agregarAmistad(a, b);
+
+            afirmar(gestor.sonAmigos(a, b), "sonAmigos(A,B) = true");
+            afirmar(gestor.sonAmigos(b, a), "sonAmigos(B,A) = true (bidireccional)");
+            reportarExito("sonAmigos es bidireccional");
+        } catch (Exception e) {
+            reportarFallo("sonAmigos bidireccional", e.getMessage());
+        }
+    }
+
+    private static void afirmar(boolean cond, String msg) throws Exception { if (!cond) throw new Exception(msg); }
+    private static void reportarExito(String t) { testsPasados++; System.out.println("  [OK] " + t); }
+    private static void reportarFallo(String t, String e) { testsFallados++; System.err.println("  [FAIL] " + t + ": " + e); }
 }

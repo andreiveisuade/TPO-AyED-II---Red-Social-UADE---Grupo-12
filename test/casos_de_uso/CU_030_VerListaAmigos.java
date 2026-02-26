@@ -4,38 +4,82 @@ import modelo.Cliente;
 public class CU_030_VerListaAmigos {
     private static int testsPasados = 0, testsFallados = 0;
     private static final String TEST_DB = "data/clientes_CU030_TEST.json";
-    
+
     private static void initTestDB() {
         try (java.io.FileWriter writer = new java.io.FileWriter(TEST_DB)) {
-            writer.write("{ \"clientes\": [{\"id\": 1, \"nombre\": \"Alice\", \"scoring\": 95, \"siguiendo\": [2], \"solicitudes\": [], \"seguidores\": [2], \"amistades\": [2]}, " +
-                    "{\"id\": 2, \"nombre\": \"Bob\", \"scoring\": 80, \"siguiendo\": [1], \"solicitudes\": [], \"seguidores\": [1], \"amistades\": [1]}]}");
+            writer.write("{ \"clientes\": [] }");
         } catch (java.io.IOException e) {}
     }
-    
+
     public static void main(String[] args) {
         System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║  CU-030: VER LISTA AMIGOS");
+        System.out.println("║  CU-030: VER LISTA DE AMIGOS");
         System.out.println("╚════════════════════════════════════════════╝\n");
-        
-        testMain();
-        
-        System.out.println("\n" + "─".repeat(50));
+
+        testListaVacia();
+        testListaConAmigos();
+        testListaConMultiplesAmigos();
+
+        System.out.println("\n" + "-".repeat(50));
         System.out.printf("CU-030 RESULTADOS: %d pasados, %d fallados%n", testsPasados, testsFallados);
-        System.out.println("─".repeat(50) + "\n");
-        
+        System.out.println("-".repeat(50) + "\n");
+
         if (testsFallados > 0) System.exit(1);
     }
-    
-    private static void testMain() {
+
+    private static void testListaVacia() {
         try {
             initTestDB();
             GestorClientes gestor = new GestorClientes(TEST_DB);
-            reportarExito("Test 030");
+            int a = gestor.agregarCliente("Alice", 80);
+
+            Cliente[] amigos = gestor.obtenerAmigos(a);
+            afirmar(amigos.length == 0, "sin amigos debe retornar array vacio");
+            reportarExito("lista vacia sin amigos");
         } catch (Exception e) {
-            reportarFallo("Test 030", e.getMessage());
+            reportarFallo("lista vacia sin amigos", e.getMessage());
         }
     }
-    
-    private static void reportarExito(String testName) { testsPasados++; System.out.println("  [OK] " + testName); }
-    private static void reportarFallo(String testName, String error) { testsFallados++; System.err.println("  [FAIL] " + testName); }
+
+    private static void testListaConAmigos() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+            int a = gestor.agregarCliente("Alice", 80);
+            int b = gestor.agregarCliente("Bob", 70);
+            gestor.agregarAmistad(a, b);
+
+            Cliente[] amigosA = gestor.obtenerAmigos(a);
+            afirmar(amigosA.length == 1, "Alice debe tener 1 amigo, tiene: " + amigosA.length);
+            afirmar(amigosA[0].getId() == b, "el amigo de Alice debe ser Bob");
+
+            Cliente[] amigosB = gestor.obtenerAmigos(b);
+            afirmar(amigosB.length == 1, "Bob debe tener 1 amigo, tiene: " + amigosB.length);
+            reportarExito("lista con 1 amigo (ambos lados)");
+        } catch (Exception e) {
+            reportarFallo("lista con 1 amigo", e.getMessage());
+        }
+    }
+
+    private static void testListaConMultiplesAmigos() {
+        try {
+            initTestDB();
+            GestorClientes gestor = new GestorClientes(TEST_DB);
+            int a = gestor.agregarCliente("Alice", 80);
+            int b = gestor.agregarCliente("Bob", 70);
+            int c = gestor.agregarCliente("Charlie", 60);
+            gestor.agregarAmistad(a, b);
+            gestor.agregarAmistad(a, c);
+
+            Cliente[] amigosA = gestor.obtenerAmigos(a);
+            afirmar(amigosA.length == 2, "Alice debe tener 2 amigos, tiene: " + amigosA.length);
+            reportarExito("lista con multiples amigos");
+        } catch (Exception e) {
+            reportarFallo("lista con multiples amigos", e.getMessage());
+        }
+    }
+
+    private static void afirmar(boolean cond, String msg) throws Exception { if (!cond) throw new Exception(msg); }
+    private static void reportarExito(String t) { testsPasados++; System.out.println("  [OK] " + t); }
+    private static void reportarFallo(String t, String e) { testsFallados++; System.err.println("  [FAIL] " + t + ": " + e); }
 }
