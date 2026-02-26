@@ -35,7 +35,8 @@ bin/
 # Mac
 .DS_Store
 
-# Data (mantener el dataset original, ignorar copias de test)
+# Data (ignorar dataset grande y copias de test)
 data/clientes_TEST.json
+data/clientes_1M.json
 
 *.pdf
