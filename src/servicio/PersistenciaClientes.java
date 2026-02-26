@@ -62,6 +62,11 @@ public class PersistenciaClientes {
                     c.cargarSiguiendo(dto.siguiendo);
                     c.cargarSolicitudes(dto.solicitudes);
 
+                    // Cargar amistades (Iteración 3 - puede ser null en versiones antiguas)
+                    if (dto.amistades != null) {
+                        c.cargarAmistades(dto.amistades);
+                    }
+
                     // Cargar seguidores (puede ser null en versiones antiguas del JSON)
                     if (dto.seguidores != null) {
                         int[] idsSeguidores = new int[dto.seguidores.length];
@@ -111,6 +116,7 @@ public class PersistenciaClientes {
                 dto.siguiendo = c.getSiguiendo();
                 dto.solicitudes = c.getSolicitudesRecibidasSerialized();
                 dto.seguidores = c.getSeguidoresSerialized();
+                dto.amistades = c.getAmistadesSerialized();
                 wrapper.clientes[i] = dto;
             }
 
@@ -132,6 +138,7 @@ public class PersistenciaClientes {
         public int[] siguiendo;
         public String[] solicitudes;
         public String[] seguidores;
+        public int[] amistades;
     }
 
     /**

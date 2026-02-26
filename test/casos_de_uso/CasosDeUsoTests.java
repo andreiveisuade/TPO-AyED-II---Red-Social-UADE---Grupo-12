@@ -62,6 +62,20 @@ public class CasosDeUsoTests {
         ejecutarTest("CU_026_ObtenerClientesCuartoNivel");
         ejecutarTest("CU_027_ConsultarInfluenciaPorScoring");
 
+        System.out.println("\nITERACION 3: RELACIONES BIDIRECCIONALES");
+        System.out.println("-".repeat(70));
+        ejecutarTest("CU_028_AgregarAmistadBidireccional");
+        ejecutarTest("CU_029_EliminarAmistadBidireccional");
+        ejecutarTest("CU_030_VerListaAmigos");
+        ejecutarTest("CU_031_VerificarSiSonAmigos");
+        ejecutarTest("CU_032_ObtenerCantidadAmigos");
+
+        System.out.println("\nITERACION 3: ANALISIS DE DISTANCIA");
+        System.out.println("-".repeat(70));
+        ejecutarTest("CU_033_CalcularDistancia");
+        ejecutarTest("CU_034_EncontrarCaminoCorto");
+        ejecutarTest("CU_035_VerificarConectividad");
+
         System.out.println("\nSISTEMA: PERSISTENCIA");
         System.out.println("-".repeat(70));
         ejecutarTest("CU_036_CargarClientesDesdeJson");

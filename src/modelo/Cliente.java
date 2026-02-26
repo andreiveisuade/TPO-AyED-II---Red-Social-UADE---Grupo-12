@@ -32,6 +32,7 @@ public class Cliente {
     private int scoring;
     private tda.Diccionario<Integer, Boolean> siguiendo;  // Diccionario de usuarios que sigue
     private tda.Diccionario<Integer, Boolean> seguidores;  // Diccionario de usuarios que lo siguen
+    private tda.Diccionario<Integer, Boolean> amistades;  // Diccionario de amigos (relaciones bidireccionales - Iteración 3)
     private Cola<SolicitudSeguimiento> solicitudesPendientes;  // Cola de solicitudes recibidas
 
     // Cache de arrays para evitar reparsear claves del Diccionario en cada llamada.
@@ -63,6 +64,7 @@ public class Cliente {
         this.scoring = scoring;
         this.siguiendo = new tda.Diccionario<>(); // Inicializar diccionario vacío
         this.seguidores = new tda.Diccionario<>(); // Inicializar diccionario vacío de seguidores
+        this.amistades = new tda.Diccionario<>(); // Inicializar diccionario vacío de amistades (Iteración 3)
         this.solicitudesPendientes = new Cola<>();  // Inicializar cola vacía
     }
 
@@ -221,6 +223,65 @@ public class Cliente {
     
     /*
     ══════════════════════════════════════════════════════════
+    ITERACIÓN 3: AMISTADES (RELACIONES BIDIRECCIONALES)
+    ══════════════════════════════════════════════════════════
+    */
+
+    /*
+    Agrega una amistad con otro cliente.
+    Complejidad: O(1)
+    Retorna false si ya son amigos o si es él mismo.
+    */
+    public boolean agregarAmistad(int idAmigo) {
+        if (idAmigo == this.id) {
+            return false;
+        }
+        if (amistades.contiene(idAmigo)) {
+            return false;
+        }
+        amistades.insertar(idAmigo, true);
+        return true;
+    }
+
+    /*
+    Elimina una amistad con otro cliente.
+    Complejidad: O(1)
+    Retorna false si no eran amigos.
+    */
+    public boolean eliminarAmistad(int idAmigo) {
+        if (amistades.contiene(idAmigo)) {
+            amistades.eliminar(idAmigo);
+            return true;
+        }
+        return false;
+    }
+
+    /*
+    Retorna los IDs de todos los amigos de este cliente.
+    Complejidad: O(k) donde k es la cantidad de amigos.
+    */
+    public int[] obtenerAmigos() {
+        return parsearClaves(amistades);
+    }
+
+    /*
+    Retorna la cantidad de amigos de este cliente.
+    Complejidad: O(1)
+    */
+    public int getCantidadAmigos() {
+        return amistades.getCantidad();
+    }
+
+    /*
+    Verifica si es amigo de otro cliente.
+    Complejidad: O(1)
+    */
+    public boolean esAmigoDE(int idOtroCliente) {
+        return amistades.contiene(idOtroCliente);
+    }
+
+    /*
+    ══════════════════════════════════════════════════════════
     GESTIÓN DE SOLICITUDES DE SEGUIMIENTO
     ══════════════════════════════════════════════════════════
     */
@@ -365,6 +426,27 @@ public class Cliente {
             this.seguidores.insertar(idSeguidor, true);
         }
         cacheSeguidores = null;
+    }
+
+    /*
+    Serializa los amigos para guardarlos en el JSON (Iteración 3).
+    Complejidad: O(k) donde k es la cantidad de amigos.
+    */
+    public int[] getAmistadesSerialized() {
+        return obtenerAmigos();
+    }
+
+    /*
+    Carga amigos desde la persistencia (Iteración 3).
+    Complejidad: O(k) donde k es la cantidad de amigos.
+    */
+    public void cargarAmistades(int[] ids) {
+        if (ids == null) return;
+        for (int idAmigo : ids) {
+            if (idAmigo != this.id) {
+                this.amistades.insertar(idAmigo, true);
+            }
+        }
     }
 
     /*

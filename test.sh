@@ -93,7 +93,33 @@ fi
 
 echo ""
 
-# ─── 7. Casos de Uso (Suite completa) ───
+# ─── 7. DistanciaTest ───
+echo "Compilando DistanciaTest..."
+javac -cp "$CP" -d out test/DistanciaTest.java $SRC_FILES
+if [ $? -eq 0 ]; then
+    java -ea -cp out:"$CP" DistanciaTest
+    if [ $? -ne 0 ]; then FAILED=1; fi
+else
+    echo "❌ Error compilando DistanciaTest"
+    FAILED=1
+fi
+
+echo ""
+
+# ─── 8. AmistadTest ───
+echo "Compilando AmistadTest..."
+javac -cp "$CP" -d out test/AmistadTest.java $SRC_FILES
+if [ $? -eq 0 ]; then
+    java -ea -cp out:"$CP" AmistadTest
+    if [ $? -ne 0 ]; then FAILED=1; fi
+else
+    echo "❌ Error compilando AmistadTest"
+    FAILED=1
+fi
+
+echo ""
+
+# ─── 9. Casos de Uso (Suite completa) ───
 echo "Compilando Casos de Uso..."
 javac -cp "$CP" -d out test/casos_de_uso/*.java test/casos_de_uso/edge_cases/*.java test/casos_de_uso/performance/*.java $SRC_FILES
 if [ $? -eq 0 ]; then

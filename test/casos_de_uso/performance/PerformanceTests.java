@@ -20,6 +20,7 @@ public class PerformanceTests {
         ejecutarTest("PERF_001_BusquedaPorIdO1");
         ejecutarTest("PERF_002_ListarTodosON");
         ejecutarTest("PERF_003_BusquedaABBOlogN");
+        ejecutarTest("PERF_004_DistanciaOVE");
         ejecutarTest("PERF_005_EscalabilidadMuchosClientes");
 
         // Resumen final
